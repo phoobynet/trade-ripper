@@ -18,11 +18,31 @@ type client struct {
 var connectedClients = make(map[string]*client)
 
 type Message struct {
-	MessageType    string `json:"type"`
-	MessageContent string `json:"content"`
+	Type string `json:"type"`
 }
 
-func Broadcast(message Message) {
+type ErrorMessage struct {
+	Message
+	Msg   string `json:"msg"`
+	Count int    `json:"count"`
+}
+
+type InfoMessage struct {
+	Message
+	Msg string `json:"msg"`
+}
+
+type RestartMessage struct {
+	Message
+	Count int `json:"count"`
+}
+
+type TradeCountMessage struct {
+	Message
+	Count int `json:"count"`
+}
+
+func Broadcast(message any) {
 	for _, c := range connectedClients {
 		err := c.conn.WriteJSON(message)
 
@@ -39,6 +59,12 @@ func Run(options configuration.Options) {
 	app.Use(logger.New())
 
 	app.Static("/", "./public")
+
+	app.Get("/api/class", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"class": options.Class,
+		})
+	})
 
 	app.Use("/ws", func(c *fiber.Ctx) error {
 		// IsWebSocketUpgrade returns true if the client

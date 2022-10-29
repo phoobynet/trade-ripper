@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/server"
 	"github.com/phoobynet/trade-ripper/utils"
 	qdb "github.com/questdb/go-questdb-client"
 	"github.com/sirupsen/logrus"
@@ -47,6 +48,13 @@ func (q *TradesBuffer) Start() {
 
 	for range ticker.C {
 		q.flush()
+		server.Broadcast(
+			server.TradeCountMessage{
+				Message: server.Message{
+					Type: "tradeCount",
+				},
+				Count: q.totalTrades,
+			})
 	}
 }
 

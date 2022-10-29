@@ -1,12 +1,24 @@
 import Stat from '../components/Stat'
 import { useAppStore } from '../stores/useAppStore'
 import numeral from 'numeral'
+import { useEffect, useState } from 'react'
 import { sentenceCase } from 'sentence-case'
 
 export default function Dashboard() {
   const errorsCount = useAppStore((state) => state.errorsCount)
   const totalTrades = useAppStore((state) => state.totalTrades)
-  const instrumentClass = useAppStore((state) => state.instrumentClass)
+  const infoMessages = useAppStore((state) => state.infoMessages)
+  const errorMessages = useAppStore((state) => state.errorMessages)
+  const [instrumentClass, setInstrumentClass] = useState<string>('')
+
+  useEffect(() => {
+    void (async () => {
+      const response = await fetch('http://localhost:3000/api/class')
+      setInstrumentClass(
+        await response.json().then((j) => (j as { class: string }).class),
+      )
+    })()
+  }, [])
 
   return (
     <div>
@@ -27,6 +39,12 @@ export default function Dashboard() {
             value={numeral(errorsCount).format('0,0')}
             type={'error'}
           ></Stat>
+        </section>
+        <section>
+          <pre>{infoMessages}</pre>
+        </section>
+        <section>
+          <pre>{errorMessages}</pre>
         </section>
       </main>
     </div>

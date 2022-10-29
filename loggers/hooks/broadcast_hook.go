@@ -6,6 +6,8 @@ import (
 	"io"
 )
 
+var errorCount int
+
 type BroadcastHook struct {
 	Writer    io.Writer
 	LogLevels []logrus.Level
@@ -23,10 +25,25 @@ func (hook *BroadcastHook) Fire(entry *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	server.Broadcast(server.Message{
-		MessageType:    entry.Level.String(),
-		MessageContent: string(line),
-	})
+
+	switch entry.Level.String() {
+	case "panic":
+		fallthrough
+	case "fatal":
+		fallthrough
+	case "error":
+		errorCount += 1
+		server.Broadcast(server.ErrorMessage{
+			Message: server.Message{Type: "error"},
+			Msg:     string(line),
+			Count:   errorCount,
+		})
+	default:
+		server.Broadcast(server.InfoMessage{
+			Message: server.Message{Type: "info"},
+			Msg:     string(line),
+		})
+	}
 
 	return nil
 }

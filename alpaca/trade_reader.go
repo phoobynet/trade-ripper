@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/server"
 	"github.com/sirupsen/logrus"
 	"net/url"
 	"time"
@@ -19,6 +20,7 @@ type TradeReader struct {
 	lastMessageAt        time.Time
 	options              configuration.Options
 	socketURL            *url.URL
+	restartCount         int
 }
 
 func NewTradeReader(config *TradeReaderConfig) *TradeReader {
@@ -50,6 +52,13 @@ func (r *TradeReader) Start() error {
 	defer func() {
 		if recErr := recover(); recErr != nil {
 			if restarts > 50 {
+				server.Broadcast(server.ErrorMessage{
+					Message: server.Message{
+						Type: "error",
+					},
+					Msg:   "Server crashed due to too many restarts - sorry!",
+					Count: 9999,
+				})
 				panic(fmt.Errorf("too many restarts: %v", recErr))
 			}
 
