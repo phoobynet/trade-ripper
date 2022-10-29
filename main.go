@@ -16,7 +16,7 @@ import (
 
 var quitChannel = make(chan os.Signal, 1)
 var options configuration.Options
-var sipReader *alpaca.SIPReader
+var sipReader *alpaca.TradeReader
 
 var rawMessageChannel chan []byte
 var tradesChannel chan alpaca.TradeRow
@@ -76,10 +76,10 @@ func run() {
 
 	questTradeBuffer := buffers.NewQuestBuffer(options)
 
-	sipReader = alpaca.NewSIPReader(&alpaca.SIPReaderConfig{
+	sipReader = alpaca.NewTradeReader(&alpaca.TradeReaderConfig{
 		Key:               os.Getenv("APCA_API_KEY_ID"),
 		Secret:            os.Getenv("APCA_API_SECRET_KEY"),
-		Trades:            []string{"*"},
+		Symbols:           []string{"*"},
 		RawMessageChannel: rawMessageChannel,
 		ErrorsChannel:     errorsChannel,
 	})

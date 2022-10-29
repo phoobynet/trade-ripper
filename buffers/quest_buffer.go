@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/utils"
 	qdb "github.com/questdb/go-questdb-client"
 	"github.com/sirupsen/logrus"
 	"strings"
@@ -12,9 +13,9 @@ import (
 	"time"
 )
 
-const AutoFlushThreshold = 2_000
+const BatchSize = 2_000
 
-type QuestTradesBuffer struct {
+type TradesBuffer struct {
 	sender      *qdb.LineSender
 	totalTrades int
 	bufferCount int
@@ -23,7 +24,7 @@ type QuestTradesBuffer struct {
 	mu          sync.Mutex
 }
 
-func NewQuestBuffer(options configuration.Options) *QuestTradesBuffer {
+func NewQuestBuffer(options configuration.Options) *TradesBuffer {
 	questDBAddress := fmt.Sprintf("%s", options.QuestDBURI)
 	logrus.Infof("Attempting to connect to %s", questDBAddress)
 
@@ -35,13 +36,13 @@ func NewQuestBuffer(options configuration.Options) *QuestTradesBuffer {
 
 	logrus.Infof("Attempting to connect to %s...CONNECTED", questDBAddress)
 
-	return &QuestTradesBuffer{
-		sender: sender,
+	return &TradesBuffer{
+		sender: sender.Table(options.Class),
 		ctx:    context.Background(),
 	}
 }
 
-func (q *QuestTradesBuffer) Start() {
+func (q *TradesBuffer) Start() {
 	ticker := time.NewTicker(1 * time.Second)
 
 	for range ticker.C {
@@ -49,7 +50,7 @@ func (q *QuestTradesBuffer) Start() {
 	}
 }
 
-func (q *QuestTradesBuffer) Add(trade alpaca.TradeRow) {
+func (q *TradesBuffer) Add(trade alpaca.TradeRow) {
 	if strings.HasSuffix(trade.Symbol, "TEST.A") {
 		return
 	}
@@ -58,25 +59,35 @@ func (q *QuestTradesBuffer) Add(trade alpaca.TradeRow) {
 	q.bufferCount += 1
 	q.totalTrades += q.bufferCount
 
-	insertErr := q.sender.Table("trades").Symbol("sy", trade.Symbol).Float64Column("s", trade.Size).Float64Column("p", trade.Price).At(q.ctx, trade.Timestamp)
-
-	if insertErr != nil {
-		logrus.Error("failed to send trade to quest: ", insertErr)
-	}
-
-	if q.bufferCount > AutoFlushThreshold {
-		q.flush()
-	}
+	q.buffer = append(q.buffer, trade)
 }
 
-func (q *QuestTradesBuffer) flush() {
+func (q *TradesBuffer) flush() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	if q.bufferCount > 0 {
-		err := q.sender.Flush(q.ctx)
-		if err != nil {
-			logrus.Errorf("error inserting docs: %s", err)
+
+	if q.bufferCount == 0 {
+		return
+	}
+
+	tradeBatches := utils.Chunk(q.buffer, BatchSize)
+
+	for _, tradeBatch := range tradeBatches {
+		for _, trade := range tradeBatch {
+			insertErr := q.sender.Symbol("sy", trade.Symbol).Float64Column("s", trade.Size).Float64Column("p", trade.Price).At(q.ctx, trade.Timestamp)
+
+			if insertErr != nil {
+				logrus.Error("failed to send trade to quest: ", insertErr)
+			}
 		}
-		q.bufferCount = 0
+	}
+
+	q.bufferCount = 0
+	q.buffer = make([]alpaca.TradeRow, 0)
+
+	err := q.sender.Flush(q.ctx)
+
+	if err != nil {
+		logrus.Errorf("error inserting docs: %s", err)
 	}
 }

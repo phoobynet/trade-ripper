@@ -3,30 +3,40 @@ package alpaca
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/sirupsen/logrus"
+	"net/url"
 	"time"
 )
 
-// SIPReader - https://alpaca.markets/docs/api-references/market-data-api/stock-pricing-data/realtime/
-type SIPReader struct {
+// TradeReader - https://alpaca.markets/docs/api-references/market-data-api/stock-pricing-data/realtime/
+type TradeReader struct {
 	conn                 *websocket.Conn
 	closed               bool
-	config               *SIPReaderConfig
+	config               *TradeReaderConfig
 	restartCountInPeriod int
 	lastRestartTime      time.Time
 	lastMessageAt        time.Time
+	options              configuration.Options
+	socketURL            *url.URL
 }
 
-func NewSIPReader(config *SIPReaderConfig) *SIPReader {
-	if config.SocketURL == nil {
-		config.SocketURL = &sipSocketURL
+func NewTradeReader(config *TradeReaderConfig) *TradeReader {
+	var socketURL *url.URL
+
+	if config.Options.Class == "crypto" {
+		socketURL = &cryptoURL
+	} else if config.Options.Class == "us_equity" {
+		socketURL = &usEquitiesURL
 	}
-	return &SIPReader{
-		config: config,
+
+	return &TradeReader{
+		config:    config,
+		socketURL: socketURL,
 	}
 }
 
-func (r *SIPReader) Stop() error {
+func (r *TradeReader) Stop() error {
 	if r.conn != nil && !r.closed {
 		return r.conn.Close()
 	}
@@ -36,7 +46,7 @@ func (r *SIPReader) Stop() error {
 
 var restarts int
 
-func (r *SIPReader) Start() error {
+func (r *TradeReader) Start() error {
 	defer func() {
 		if recErr := recover(); recErr != nil {
 			if restarts > 50 {
@@ -63,9 +73,9 @@ func (r *SIPReader) Start() error {
 
 	r.lastRestartTime = time.Now()
 
-	logrus.Infof("connecting to socket @%s", r.config.SocketURL.String())
+	logrus.Infof("connecting to socket @%s", r.socketURL.String())
 
-	conn, _, dialErr := websocket.DefaultDialer.Dial(r.config.SocketURL.String(), nil)
+	conn, _, dialErr := websocket.DefaultDialer.Dial(r.socketURL.String(), nil)
 
 	if dialErr != nil {
 		return dialErr
@@ -107,7 +117,7 @@ func (r *SIPReader) Start() error {
 	}
 }
 
-func (r *SIPReader) auth() error {
+func (r *TradeReader) auth() error {
 	logrus.Info("authenticating with alpaca...")
 	return r.conn.WriteJSON(&authMessage{
 		Action: "auth",
@@ -116,10 +126,10 @@ func (r *SIPReader) auth() error {
 	})
 }
 
-func (r *SIPReader) subscribe() error {
+func (r *TradeReader) subscribe() error {
 	logrus.Info("subscribing to trades...")
 	return r.conn.WriteJSON(&subscribeMessage{
 		Action: "subscribe",
-		Trades: r.config.Trades,
+		Trades: r.config.Symbols,
 	})
 }
