@@ -25,7 +25,7 @@ type TradesBuffer struct {
 	mu          sync.Mutex
 }
 
-func NewQuestBuffer(options configuration.Options) *TradesBuffer {
+func NewQuestBuffer(options *configuration.Options) *TradesBuffer {
 	questDBAddress := fmt.Sprintf("%s", options.QuestDBURI)
 	logrus.Infof("Attempting to connect to %s", questDBAddress)
 

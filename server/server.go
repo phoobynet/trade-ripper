@@ -51,7 +51,7 @@ func Broadcast(message any) {
 	}
 }
 
-func Run(options configuration.Options) {
+func Run(options *configuration.Options) {
 	app := fiber.New()
 
 	app.Use(cors.New())

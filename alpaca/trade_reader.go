@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/phoobynet/trade-ripper/configuration"
-	"github.com/phoobynet/trade-ripper/server"
 	"github.com/sirupsen/logrus"
 	"net/url"
 	"time"
@@ -49,30 +48,30 @@ func (r *TradeReader) Stop() error {
 var restarts int
 
 func (r *TradeReader) Start() error {
-	defer func() {
-		if recErr := recover(); recErr != nil {
-			if restarts > 50 {
-				server.Broadcast(server.ErrorMessage{
-					Message: server.Message{
-						Type: "error",
-					},
-					Msg:   "Server crashed due to too many restarts - sorry!",
-					Count: 9999,
-				})
-				panic(fmt.Errorf("too many restarts: %v", recErr))
-			}
-
-			logrus.Errorf("recovering from panic (will restart in 2 seconds): %v", recErr)
-			time.Sleep(2 * time.Second)
-			startErr := r.Start()
-
-			if startErr != nil {
-				panic(startErr)
-			}
-
-			restarts++
-		}
-	}()
+	//defer func() {
+	//	if recErr := recover(); recErr != nil {
+	//		if restarts > 50 {
+	//			server.Broadcast(server.ErrorMessage{
+	//				Message: server.Message{
+	//					Type: "error",
+	//				},
+	//				Msg:   "Server crashed due to too many restarts - sorry!",
+	//				Count: 9999,
+	//			})
+	//			panic(fmt.Errorf("too many restarts: %v", recErr))
+	//		}
+	//
+	//		logrus.Errorf("recovering from panic (will restart in 2 seconds): %v", recErr)
+	//		time.Sleep(2 * time.Second)
+	//		startErr := r.Start()
+	//
+	//		if startErr != nil {
+	//			panic(startErr)
+	//		}
+	//
+	//		restarts++
+	//	}
+	//}()
 
 	stopErr := r.Stop()
 

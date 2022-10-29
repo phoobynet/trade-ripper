@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/alexflint/go-arg"
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/buffers"
@@ -42,36 +41,12 @@ func main() {
 	restartsInPeriod = 0
 	restarts = 0
 
-	go run()
+	go run(&options)
 
-	server.Run(options)
+	server.Run(&options)
 }
 
-func run() {
-	defer func() {
-		if recErr := recover(); recErr != nil {
-			errorsChannel <- fmt.Errorf("recovering from panic (will restart in 2 seconds): %v", recErr)
-			time.Sleep(2 * time.Second)
-			restartsInPeriod++
-			restarts++
-
-			diff := time.Now().Sub(lastRestartTime)
-
-			if diff > 10*time.Second {
-				restartsInPeriod = 0
-			}
-
-			if restartsInPeriod > 5 {
-				panic(fmt.Errorf("too many restarts in a short period of time: %v", recErr))
-			}
-
-			startErr := sipReader.Start()
-
-			if startErr != nil {
-				panic(startErr)
-			}
-		}
-	}()
+func run(options *configuration.Options) {
 	logrus.Info("Starting up SIP Reader...")
 
 	questTradeBuffer := buffers.NewQuestBuffer(options)
