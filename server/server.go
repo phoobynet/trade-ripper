@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -110,5 +109,5 @@ func Run(options configuration.Options) {
 		}
 	}))
 
-	logrus.Fatalln(app.Listen(fmt.Sprintf(":%d", options.WebServerPort)))
+	logrus.Fatalln(app.Listen(":3000"))
 }

@@ -15,10 +15,10 @@ var logFile *os.File
 
 func init() {
 	now := time.Now().Format("20060102_150405")
-	elf, errorLogErr := os.Open(fmt.Sprintf("sipper-ripper_%s_errors.log", now))
+	elf, errorLogErr := os.Create(fmt.Sprintf("sipper-ripper_%s_errors.log", now))
 
 	if errorLogErr != nil {
-		panic("unable to create error log file")
+		panic(errorLogErr)
 	}
 
 	errorLogFile = elf
@@ -33,10 +33,10 @@ func init() {
 		},
 	})
 
-	lf, logFileErr := os.Open(fmt.Sprintf("sipper-ripper_%s.log", now))
+	lf, logFileErr := os.Create(fmt.Sprintf("sipper-ripper_%s.log", now))
 
 	if logFileErr != nil {
-		panic("unable to create log file")
+		panic(logFileErr)
 	}
 
 	logFile = lf

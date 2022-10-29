@@ -54,7 +54,18 @@ Restart the QuestDB.
 Open a web browser on http://<questdb-host>:9000, and run the following to create the table.
 
 ```sql
-CREATE TABLE 'trades'
+CREATE TABLE 'crypto'
+(
+    sy     SYMBOL      capacity    256    CACHE,
+    s float,
+    p float,
+    t      TIMESTAMP
+) timestamp(t) PARTITION BY DAY;
+
+```
+
+```sql
+CREATE TABLE 'us_equity'
 (
     sy     SYMBOL      capacity    256    CACHE,
     s float,
