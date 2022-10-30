@@ -5,4 +5,5 @@ type Options struct {
 	DBInfluxPort   int    `arg:"-i,--influx" help:"The questdb influx port e.g. 9009 (default)"`
 	DBPostgresPort int    `arg:"-p,--postgres" help:"The questdb postgres port e.g. 8812 (default)"`
 	Class          string `arg:"required,-c,--class" help:"The class to subscribe to, either crypto or us_equity"`
+	WebServerPort  int    `arg:"-w,--webserver" help:"The webserver port e.g. 3000 (default)"`
 }

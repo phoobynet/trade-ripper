@@ -2,7 +2,6 @@ package loggers
 
 import (
 	"fmt"
-	"github.com/phoobynet/trade-ripper/loggers/hooks"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/writer"
 	"io"
@@ -50,7 +49,7 @@ func init() {
 		},
 	})
 
-	logrus.AddHook(hooks.NewBroadcastHook())
+	logrus.AddHook(NewMessageStreamHook())
 }
 
 func Close() {

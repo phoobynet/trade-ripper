@@ -1,95 +1,79 @@
 package server
 
 import (
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/websocket/v2"
-	"github.com/google/uuid"
+	"encoding/json"
+	"fmt"
 	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/r3labs/sse/v2"
+	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
+	"log"
+	"net/http"
 )
 
-type client struct {
-	conn *websocket.Conn
-}
+var server *sse.Server
 
-var connectedClients = make(map[string]*client)
-
-type Message struct {
-	Type string `json:"type"`
-}
-
-type ErrorMessage struct {
-	Message
-	Msg   string `json:"msg"`
-	Count int    `json:"count"`
-}
-
-type InfoMessage struct {
-	Message
-	Msg string `json:"msg"`
-}
-
-type RestartMessage struct {
-	Message
-	Count int `json:"count"`
-}
-
-type TradeCountMessage struct {
-	Message
-	Count int64 `json:"count"`
-}
-
-func Broadcast(logEntry any) {
-	for _, c := range connectedClients {
-		if c != nil && c.conn != nil {
-			err := c.conn.WriteJSON(logEntry)
-
-			if err != nil {
-				logrus.Errorf("Error writing message to client: %v", err)
-			}
-		}
+func Publish(message any) {
+	if server == nil {
+		logrus.Error("web server is nil")
+		return
 	}
+
+	if message == nil {
+		logrus.Error("message is nil")
+		return
+	}
+
+	data, marshalErr := json.Marshal(message)
+	if marshalErr != nil {
+		return
+	}
+
+	server.Publish("messages", &sse.Event{
+		Data: data,
+	})
 }
 
 func Run(options configuration.Options) {
-	app := fiber.New()
+	server = sse.New()
+	server.CreateStream("messages")
 
-	app.Use(cors.New())
-	app.Use(logger.New())
+	// Create a new Mux and set the handler
+	mux := http.NewServeMux()
+	mux.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
+		go func() {
+			// Received Browser Disconnection
+			<-r.Context().Done()
+			println("The client is disconnected here")
+			return
+		}()
 
-	app.Static("/", "./public")
+		fmt.Printf("Client connected...\n")
 
-	app.Get("/api/class", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"class": options.Class,
-		})
+		server.ServeHTTP(w, r)
 	})
 
-	app.Use("/ws", func(c *fiber.Ctx) error {
-		if websocket.IsWebSocketUpgrade(c) {
-			c.Locals("allowed", true)
-			clientID := uuid.NewString()
-			connectedClients[clientID] = nil
-			c.Locals("clientID", clientID)
-			return c.Next()
-		}
-		return fiber.ErrUpgradeRequired
+	mux.HandleFunc("/api/class", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		_, _ = w.Write([]byte(fmt.Sprintf(`{"class": "%s"}`, options.Class)))
 	})
 
-	app.Get("/ws", websocket.New(func(c *websocket.Conn) {
-		clientID := c.Locals("clientID").(string)
+	staticFilesServer := http.FileServer(http.Dir("./public"))
 
-		if _, ok := connectedClients[clientID]; ok {
-			c.SetCloseHandler(func(code int, text string) error {
-				delete(connectedClients, clientID)
-				return nil
-			})
+	mux.Handle("/", staticFilesServer)
 
-			connectedClients[clientID] = &client{conn: c}
-		}
-	}))
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: false,
+	})
 
-	logrus.Fatalln(app.Listen(":3000"))
+	err := http.ListenAndServe(fmt.Sprintf(":%d", options.WebServerPort), c.Handler(mux))
+
+	if err != nil {
+		log.Fatalln(err)
+	}
 }

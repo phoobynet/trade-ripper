@@ -38,6 +38,10 @@ func main() {
 		options.DBPostgresPort = 8812
 	}
 
+	if options.WebServerPort == 0 {
+		options.WebServerPort = 3000
+	}
+
 	signal.Notify(quitChannel, os.Interrupt)
 
 	questDBErr := queries.InitQuestDB(options)
