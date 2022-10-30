@@ -60,7 +60,7 @@ func Run(options configuration.Options) {
 		_, _ = w.Write([]byte(fmt.Sprintf(`{"class": "%s"}`, options.Class)))
 	})
 
-	staticFilesServer := http.FileServer(http.Dir("./public"))
+	staticFilesServer := http.FileServer(http.Dir("./dist"))
 
 	mux.Handle("/", staticFilesServer)
 
