@@ -3,7 +3,7 @@ import axios, { AxiosRequestConfig } from 'axios'
 let baseUrl = '/api'
 
 if (import.meta.env.DEV) {
-  baseUrl = 'http://localhost:3000/api'
+  baseUrl = `http://${location.hostname}:3000/api`
 }
 
 export const http = axios.create({

@@ -3,7 +3,9 @@ import { InstrumentClass } from '../types/InstrumentClass'
 import { take } from 'lodash'
 import create from 'zustand'
 
-const sourceUrl = `http://${location.hostname}:${location.port}`
+const sourceUrl = import.meta.env.DEV
+  ? `http://${location.hostname}:3000`
+  : `http://${location.hostname}:${location.port}`
 
 export interface Message {
   type: string
@@ -13,6 +15,7 @@ export interface Message {
 }
 
 export interface AppStore {
+  lastMessage: Date
   messages: Message[]
   totalTrades: number
   instrumentClass?: InstrumentClass
@@ -20,6 +23,7 @@ export interface AppStore {
 }
 
 export const useAppStore = create<AppStore>((set) => ({
+  lastMessage: new Date(),
   messages: [],
   totalTrades: 0,
   instrumentClass: undefined,
@@ -45,6 +49,7 @@ eventSource.onmessage = (event) => {
     }
 
     return {
+      lastMessage: new Date(),
       messages: take([message, ...state.messages], 100),
       totalTrades,
     }
