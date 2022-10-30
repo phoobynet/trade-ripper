@@ -28,6 +28,7 @@ export default function App() {
       setShowErrorOverlay(true)
       if (!restartSocketInterval.current) {
         restartSocketInterval.current = setInterval(async () => {
+          console.info('Attempting to reconnect to socket...')
           await startSocket()
         }, 3_000)
       }

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -83,14 +82,10 @@ func Run(options configuration.Options) {
 		clientID := c.Locals("clientID").(string)
 
 		if _, ok := connectedClients[clientID]; ok {
-			logrus.Infof("Client %s connected", clientID)
 			c.SetCloseHandler(func(code int, text string) error {
-				logrus.Infof("Client %s disconnected with code %d and reason %s", clientID, code, text)
 				delete(connectedClients, clientID)
 				return nil
 			})
-
-			fmt.Printf("%+v\n", c)
 
 			connectedClients[clientID] = &client{conn: c}
 		}
