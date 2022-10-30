@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const BatchSize = 2_000
+const BatchSize = 5_000
 
 type TradesBuffer struct {
 	sender      *qdb.LineSender
@@ -70,7 +70,7 @@ func (q *TradesBuffer) Add(trade alpaca.TradeRow) {
 	}
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.bufferCount += 1
+	q.bufferCount++
 	q.totalTrades += q.bufferCount
 
 	q.buffer = append(q.buffer, trade)
@@ -86,9 +86,15 @@ func (q *TradesBuffer) flush() {
 
 	tradeBatches := utils.Chunk(q.buffer, BatchSize)
 
+	var insertErr error
+
 	for _, tradeBatch := range tradeBatches {
 		for _, trade := range tradeBatch {
-			insertErr := q.sender.Table(q.options.Class).Symbol("sy", trade.Symbol).Float64Column("s", trade.Size).Float64Column("p", trade.Price).At(q.ctx, trade.Timestamp)
+			if trade.Tks == "" {
+				insertErr = q.sender.Table(q.options.Class).Symbol("sy", trade.Symbol).Float64Column("s", trade.Size).Float64Column("p", trade.Price).At(q.ctx, trade.Timestamp)
+			} else {
+				insertErr = q.sender.Table(q.options.Class).Symbol("sy", trade.Symbol).Float64Column("s", trade.Size).Float64Column("p", trade.Price).StringColumn("tks", trade.Tks).StringColumn("b", trade.Base).StringColumn("q", trade.Quote).At(q.ctx, trade.Timestamp)
+			}
 
 			if insertErr != nil {
 				logrus.Error("failed to send trade to quest: ", insertErr)

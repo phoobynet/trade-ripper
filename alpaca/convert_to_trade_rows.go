@@ -19,6 +19,8 @@ func ConvertToTradeRows(rawMessageData []byte) ([]TradeRow, error) {
 
 	var tradeRows []TradeRow
 
+	var tradeRow TradeRow
+
 	for _, message := range inputMessages {
 		if t, exists := message["T"]; exists {
 			if t == "t" {
@@ -37,12 +39,26 @@ func ConvertToTradeRows(rawMessageData []byte) ([]TradeRow, error) {
 					continue
 				}
 
-				tradeRows = append(tradeRows, TradeRow{
+				tradeRow = TradeRow{
 					Symbol:    symbol,
 					Size:      message["s"].(float64),
 					Price:     message["p"].(float64),
 					Timestamp: timestamp.UnixNano(),
-				})
+				}
+
+				tks, tksExists := message["tks"]
+
+				if tksExists {
+					baseQuote := strings.Split(symbol, "/")
+					tradeRow.Tks = tks.(string)
+					tradeRow.Base = baseQuote[0]
+					tradeRow.Quote = baseQuote[1]
+				} else {
+					tradeRow.Tks = ""
+					tks = ""
+				}
+
+				tradeRows = append(tradeRows, tradeRow)
 			} else if t == "error" {
 				logrus.Errorf("alpaca error %v=>%v", message["code"], message["msg"])
 			} else if t == "success" {

@@ -17,6 +17,17 @@ func InitQuestDB(options configuration.Options) error {
 	}
 
 	questDB = db
+	cryptoErr := CreateCryptoTable()
+
+	if cryptoErr != nil {
+		return cryptoErr
+	}
+
+	usEquityErr := CreateUSEquityTable()
+
+	if usEquityErr != nil {
+		return usEquityErr
+	}
 
 	return nil
 }
