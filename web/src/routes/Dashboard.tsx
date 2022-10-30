@@ -1,7 +1,7 @@
 import Stat from '../components/Stat'
 import { useAppStore } from '../stores/useAppStore'
 import { differenceInSeconds } from 'date-fns'
-import humanizeDuration from 'humanize-duration'
+import { motion } from 'framer-motion'
 import numeral from 'numeral'
 import { useEffect, useRef, useState } from 'react'
 import { AiFillAlert } from 'react-icons/ai'
@@ -11,7 +11,6 @@ export default function Dashboard() {
   const totalTrades = useAppStore((state) => state.totalTrades)
   const fetchClass = useAppStore((state) => state.fetchClass)
   const instrumentClass = useAppStore((state) => state.instrumentClass)
-  const lastMessage = useAppStore((state) => state.lastMessage)
   const [secondsSinceLastCheckIn, setSecondsSinceLastCheckIn] =
     useState<number>(0)
   const lastMessageCheckInterval = useRef<ReturnType<typeof setInterval>>()
@@ -22,7 +21,9 @@ export default function Dashboard() {
     })()
 
     lastMessageCheckInterval.current = setInterval(() => {
-      setSecondsSinceLastCheckIn(differenceInSeconds(new Date(), lastMessage))
+      setSecondsSinceLastCheckIn(
+        differenceInSeconds(new Date(), useAppStore.getState().lastMessage),
+      )
     }, 1000)
 
     return () => {
@@ -34,24 +35,32 @@ export default function Dashboard() {
     <div>
       <main className={'flex flex-col space-y-4 mx-2 md:mx-0'}>
         {secondsSinceLastCheckIn > 5 ? (
-          <div className="alert alert-error shadow-lg">
-            <div>
-              <AiFillAlert
-                size={48}
-                className={'hidden md:block'}
-              />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="alert alert-error shadow-lg">
+              <div>
+                <AiFillAlert
+                  size={48}
+                  className={'hidden md:block'}
+                />
 
-              <AiFillAlert
-                size={64}
-                className={'md:hidden display'}
-              />
-              <span className={'text-sm md:text-lg'}>
-                No messages received for{' '}
-                {humanizeDuration(secondsSinceLastCheckIn)}, please check the
-                server is still running!
-              </span>
+                <AiFillAlert
+                  size={64}
+                  className={'md:hidden display'}
+                />
+                <div className={'text-sm md:text-lg'}>
+                  <p>
+                    No messages received for {secondsSinceLastCheckIn} seconds,
+                    please check the server is still running!{' '}
+                  </p>
+                  <p>Refresh this page after restarting the server.</p>
+                </div>
+              </div>
             </div>
-          </div>
+          </motion.div>
         ) : (
           <></>
         )}
@@ -62,7 +71,7 @@ export default function Dashboard() {
             type={'info'}
           ></Stat>
           <Stat
-            title={'Total Trades'}
+            title={'Trades today'}
             value={numeral(totalTrades).format('0.00a')}
             type={'info'}
           ></Stat>
