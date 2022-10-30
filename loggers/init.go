@@ -15,7 +15,26 @@ var logFile *os.File
 
 func init() {
 	now := time.Now().Format("20060102_150405")
-	elf, errorLogErr := os.Create(fmt.Sprintf("sipper-ripper_%s_errors.log", now))
+
+	lf, logFileErr := os.Create(fmt.Sprintf("trade_ripper_%s.log", now))
+
+	if logFileErr != nil {
+		panic(logFileErr)
+	}
+
+	logFile = lf
+
+	// Really important
+	logrus.SetOutput(io.Discard)
+
+	logrus.AddHook(&writer.Hook{
+		Writer: io.MultiWriter(os.Stdout, logFile),
+		LogLevels: []logrus.Level{
+			logrus.InfoLevel,
+		},
+	})
+
+	elf, errorLogErr := os.Create(fmt.Sprintf("trade_ripper_%s_errors.log", now))
 
 	if errorLogErr != nil {
 		panic(errorLogErr)
@@ -26,26 +45,7 @@ func init() {
 	logrus.AddHook(&writer.Hook{
 		Writer: io.MultiWriter(os.Stderr, errorLogFile),
 		LogLevels: []logrus.Level{
-			logrus.PanicLevel,
-			logrus.FatalLevel,
 			logrus.ErrorLevel,
-			logrus.WarnLevel,
-		},
-	})
-
-	lf, logFileErr := os.Create(fmt.Sprintf("sipper-ripper_%s.log", now))
-
-	if logFileErr != nil {
-		panic(logFileErr)
-	}
-
-	logFile = lf
-
-	logrus.AddHook(&writer.Hook{
-		Writer: io.MultiWriter(os.Stdout, logFile),
-		LogLevels: []logrus.Level{
-			logrus.InfoLevel,
-			logrus.DebugLevel,
 		},
 	})
 

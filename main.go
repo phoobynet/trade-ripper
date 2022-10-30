@@ -17,12 +17,12 @@ var quitChannel = make(chan os.Signal, 1)
 var options configuration.Options
 var sipReader *alpaca.TradeReader
 
-var rawMessageChannel chan []byte
-var tradesChannel chan alpaca.TradeRow
-var errorsChannel chan error
-var errorsReceived int
-var restartsInPeriod int
-var restarts int
+var rawMessageChannel = make(chan []byte, 50_000)
+var tradesChannel = make(chan alpaca.TradeRow, 100_000)
+var errorsChannel = make(chan error, 100)
+var errorsReceived = 0
+var restartsInPeriod = 0
+var restarts = 0
 var lastRestartTime time.Time
 var tradeCount int
 
@@ -34,20 +34,13 @@ func main() {
 	arg.MustParse(&options)
 	signal.Notify(quitChannel, os.Interrupt)
 
-	rawMessageChannel = make(chan []byte, 50_000)
-	tradesChannel = make(chan alpaca.TradeRow, 100_000)
-	errorsChannel = make(chan error, 100)
-	errorsReceived = 0
-	restartsInPeriod = 0
-	restarts = 0
+	go run(options)
 
-	go run(&options)
-
-	server.Run(&options)
+	server.Run(options)
 }
 
-func run(options *configuration.Options) {
-	logrus.Info("Starting up SIP Reader...")
+func run(options configuration.Options) {
+	logrus.Info("Starting up Trade Reader...")
 
 	questTradeBuffer := buffers.NewQuestBuffer(options)
 
@@ -57,6 +50,7 @@ func run(options *configuration.Options) {
 		Symbols:           []string{"*"},
 		RawMessageChannel: rawMessageChannel,
 		ErrorsChannel:     errorsChannel,
+		Options:           options,
 	})
 
 	go func() {
@@ -64,14 +58,14 @@ func run(options *configuration.Options) {
 	}()
 
 	go func() {
-		sipReaderStartErr := sipReader.Start()
+		tradeReaderStartErr := sipReader.Start()
 
-		if sipReaderStartErr != nil {
-			logrus.Fatalln(sipReaderStartErr)
+		if tradeReaderStartErr != nil {
+			logrus.Fatalln(tradeReaderStartErr)
 		}
 	}()
 
-	logrus.Info("SIP Reader has started and is waiting for trades...")
+	logrus.Info("Trade Reader has started and is waiting for trades...")
 
 	for {
 		select {

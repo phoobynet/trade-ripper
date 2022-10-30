@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -43,15 +44,17 @@ type TradeCountMessage struct {
 
 func Broadcast(message any) {
 	for _, c := range connectedClients {
-		err := c.conn.WriteJSON(message)
+		if c != nil && c.conn != nil {
+			err := c.conn.WriteJSON(message)
 
-		if err != nil {
-			logrus.Errorf("Error writing message to client: %v", err)
+			if err != nil {
+				logrus.Errorf("Error writing message to client: %v", err)
+			}
 		}
 	}
 }
 
-func Run(options *configuration.Options) {
+func Run(options configuration.Options) {
 	app := fiber.New()
 
 	app.Use(cors.New())
@@ -66,8 +69,6 @@ func Run(options *configuration.Options) {
 	})
 
 	app.Use("/ws", func(c *fiber.Ctx) error {
-		// IsWebSocketUpgrade returns true if the client
-		// requested upgrade to the WebSocket protocol.
 		if websocket.IsWebSocketUpgrade(c) {
 			c.Locals("allowed", true)
 			clientID := uuid.NewString()
@@ -84,10 +85,12 @@ func Run(options *configuration.Options) {
 		if _, ok := connectedClients[clientID]; ok {
 			logrus.Infof("Client %s connected", clientID)
 			c.SetCloseHandler(func(code int, text string) error {
-				logrus.Infof("Client %s disconnected", clientID)
+				logrus.Infof("Client %s disconnected with code %d and reason %s", clientID, code, text)
 				delete(connectedClients, clientID)
 				return nil
 			})
+
+			fmt.Printf("%+v\n", c)
 
 			connectedClients[clientID] = &client{conn: c}
 		}

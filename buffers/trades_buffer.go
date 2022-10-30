@@ -23,9 +23,10 @@ type TradesBuffer struct {
 	buffer      []alpaca.TradeRow
 	ctx         context.Context
 	mu          sync.Mutex
+	options     configuration.Options
 }
 
-func NewQuestBuffer(options *configuration.Options) *TradesBuffer {
+func NewQuestBuffer(options configuration.Options) *TradesBuffer {
 	questDBAddress := fmt.Sprintf("%s", options.QuestDBURI)
 	logrus.Infof("Attempting to connect to %s", questDBAddress)
 
@@ -38,8 +39,9 @@ func NewQuestBuffer(options *configuration.Options) *TradesBuffer {
 	logrus.Infof("Attempting to connect to %s...CONNECTED", questDBAddress)
 
 	return &TradesBuffer{
-		sender: sender.Table(options.Class),
-		ctx:    context.Background(),
+		sender:  sender,
+		ctx:     context.Background(),
+		options: options,
 	}
 }
 
@@ -82,7 +84,7 @@ func (q *TradesBuffer) flush() {
 
 	for _, tradeBatch := range tradeBatches {
 		for _, trade := range tradeBatch {
-			insertErr := q.sender.Symbol("sy", trade.Symbol).Float64Column("s", trade.Size).Float64Column("p", trade.Price).At(q.ctx, trade.Timestamp)
+			insertErr := q.sender.Table(q.options.Class).Symbol("sy", trade.Symbol).Float64Column("s", trade.Size).Float64Column("p", trade.Price).At(q.ctx, trade.Timestamp)
 
 			if insertErr != nil {
 				logrus.Error("failed to send trade to quest: ", insertErr)

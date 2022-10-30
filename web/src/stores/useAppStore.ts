@@ -7,6 +7,8 @@ export interface AppStore {
   restartCount: number
   totalTrades: number
   instrumentClass: string
+  connectionStatus: 'connected' | 'disconnected' | 'error'
+  connectionEvent?: Event | CloseEvent
 }
 
 export const useAppStore = create<AppStore>(() => ({
@@ -16,4 +18,6 @@ export const useAppStore = create<AppStore>(() => ({
   restartCount: 0,
   totalTrades: 0,
   instrumentClass: '?',
+  connectionStatus: 'disconnected',
+  connectionEvent: undefined,
 }))

@@ -28,7 +28,7 @@ func ConvertToTradeRows(rawMessageData []byte) ([]TradeRow, error) {
 					continue
 				}
 
-				timestampRaw := message["T"].(string)
+				timestampRaw := message["t"].(string)
 
 				timestamp, timestampErr := time.Parse(time.RFC3339Nano, timestampRaw)
 

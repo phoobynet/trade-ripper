@@ -18,17 +18,17 @@ type TradeReader struct {
 	lastRestartTime      time.Time
 	lastMessageAt        time.Time
 	options              configuration.Options
-	socketURL            *url.URL
+	socketURL            url.URL
 	restartCount         int
 }
 
 func NewTradeReader(config *TradeReaderConfig) *TradeReader {
-	var socketURL *url.URL
+	var socketURL url.URL
 
 	if config.Options.Class == "crypto" {
-		socketURL = &cryptoURL
+		socketURL = cryptoURL
 	} else if config.Options.Class == "us_equity" {
-		socketURL = &usEquitiesURL
+		socketURL = usEquitiesURL
 	}
 
 	return &TradeReader{
