@@ -3,8 +3,7 @@ import { InstrumentClass } from '../types/InstrumentClass'
 import { take } from 'lodash'
 import create from 'zustand'
 
-// inject port during build
-const sourceUrl = `http://${location.hostname}:3000`
+const sourceUrl = `http://${location.hostname}:${location.port}`
 
 export interface Message {
   type: string

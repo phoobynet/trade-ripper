@@ -1,17 +1,21 @@
 package server
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/r3labs/sse/v2"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
+	"io/fs"
 	"log"
 	"net/http"
 )
 
-var server *sse.Server
+var (
+	server *sse.Server
+)
 
 func Publish(message any) {
 	if server == nil {
@@ -34,7 +38,7 @@ func Publish(message any) {
 	})
 }
 
-func Run(options configuration.Options) {
+func Run(options configuration.Options, dist embed.FS) {
 	server = sse.New()
 	server.CreateStream("messages")
 
@@ -60,7 +64,14 @@ func Run(options configuration.Options) {
 		_, _ = w.Write([]byte(fmt.Sprintf(`{"class": "%s"}`, options.Class)))
 	})
 
-	staticFilesServer := http.FileServer(http.Dir("./dist"))
+	fmt.Println("using embed mode")
+	fsys, distFSErr := fs.Sub(dist, "dist")
+
+	if distFSErr != nil {
+		panic(distFSErr)
+	}
+
+	staticFilesServer := http.FileServer(http.FS(fsys))
 
 	mux.Handle("/", staticFilesServer)
 
@@ -71,9 +82,9 @@ func Run(options configuration.Options) {
 		AllowCredentials: false,
 	})
 
-	err := http.ListenAndServe(fmt.Sprintf(":%d", options.WebServerPort), c.Handler(mux))
+	listenErr := http.ListenAndServe(fmt.Sprintf(":%d", options.WebServerPort), c.Handler(mux))
 
-	if err != nil {
-		log.Fatalln(err)
+	if listenErr != nil {
+		log.Fatalln(listenErr)
 	}
 }

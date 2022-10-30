@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"github.com/alexflint/go-arg"
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/buffers"
@@ -13,15 +14,18 @@ import (
 	"os/signal"
 )
 
-var quitChannel = make(chan os.Signal, 1)
-var options configuration.Options
-var sipReader *alpaca.TradeReader
-
-var rawMessageChannel = make(chan []byte, 50_000)
-var tradesChannel = make(chan alpaca.TradeRow, 100_000)
-var errorsChannel = make(chan error, 100)
-var errorsReceived = 0
-var tradeCount int64
+var (
+	//go:embed dist
+	dist              embed.FS
+	quitChannel       = make(chan os.Signal, 1)
+	options           configuration.Options
+	sipReader         *alpaca.TradeReader
+	rawMessageChannel = make(chan []byte, 50_000)
+	tradesChannel     = make(chan alpaca.TradeRow, 100_000)
+	errorsChannel     = make(chan error, 100)
+	errorsReceived    = 0
+	tradeCount        int64
+)
 
 func main() {
 	defer func() {
@@ -51,7 +55,7 @@ func main() {
 
 	go run(options)
 
-	server.Run(options)
+	server.Run(options, dist)
 }
 
 func run(options configuration.Options) {

@@ -67,7 +67,7 @@ CREATE TABLE 'crypto'
 ```sql
 CREATE TABLE 'us_equity'
 (
-    sy     SYMBOL      capacity    256    CACHE,
+    sy     SYMBOL      capacity    12000    CACHE,
     s float,
     p float,
     t      TIMESTAMP
@@ -82,9 +82,11 @@ the [Influx DB inline protocol](https://questdb.io/docs/develop/insert-data/#inf
 is `9009`)
 
 ```bash
+cd web && npm run build
+
 go build
 
-./trade-ripper --host my-questdb-host --port 9009
+./trade-ripper --host my.questdb.host --influx 9009 --postgres 8812 --w 3000
 ```
 
 

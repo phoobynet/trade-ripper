@@ -1,7 +1,3 @@
 #!/bin/zsh
 
-# Build
-go build
-
-# Run
-./trade-ripper -q home.docker.lan:9009 -c crypto
+./trade-ripper --class crypto --host home.docker.lan --webserver 3000 --postgres 8812 --influx 9009
