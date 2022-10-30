@@ -1,6 +1,8 @@
 package configuration
 
 type Options struct {
-	QuestDBURI string `arg:"required,-q" help:"The questdb post e.g. my.questdb.db:9009"`
-	Class      string `arg:"required,-c" help:"The class to subscribe to, either crypto or us_equity"`
+	DBHost         string `arg:"required,-h,--host" help:"The questdb post e.g. my.questdb.db"`
+	DBInfluxPort   int    `arg:"-i,--influx" help:"The questdb influx port e.g. 9009 (default)"`
+	DBPostgresPort int    `arg:"-p,--postgres" help:"The questdb postgres port e.g. 8812 (default)"`
+	Class          string `arg:"required,-c,--class" help:"The class to subscribe to, either crypto or us_equity"`
 }

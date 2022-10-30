@@ -1,7 +1,7 @@
 import Stat from '../components/Stat'
 import { useAppStore } from '../stores/useAppStore'
 import numeral from 'numeral'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { sentenceCase } from 'sentence-case'
 
 export default function Dashboard() {
@@ -9,14 +9,12 @@ export default function Dashboard() {
   const totalTrades = useAppStore((state) => state.totalTrades)
   const infoMessages = useAppStore((state) => state.infoMessages)
   const errorMessages = useAppStore((state) => state.errorMessages)
-  const [instrumentClass, setInstrumentClass] = useState<string>('')
+  const fetchClass = useAppStore((state) => state.fetchClass)
+  const instrumentClass = useAppStore((state) => state.instrumentClass)
 
   useEffect(() => {
     void (async () => {
-      const response = await fetch('http://localhost:3000/api/class')
-      setInstrumentClass(
-        await response.json().then((j) => (j as { class: string }).class),
-      )
+      await fetchClass()
     })()
   }, [])
 
@@ -26,7 +24,7 @@ export default function Dashboard() {
         <section className={'grid grid-cols-3 gap-1'}>
           <Stat
             title={'Class'}
-            value={sentenceCase(instrumentClass)}
+            value={sentenceCase(instrumentClass ?? 'loading')}
             type={'info'}
           ></Stat>
           <Stat

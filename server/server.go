@@ -39,7 +39,7 @@ type RestartMessage struct {
 
 type TradeCountMessage struct {
 	Message
-	Count int `json:"count"`
+	Count int64 `json:"count"`
 }
 
 func Broadcast(message any) {

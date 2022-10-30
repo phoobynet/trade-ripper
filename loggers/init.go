@@ -26,6 +26,7 @@ func init() {
 
 	// Really important
 	logrus.SetOutput(io.Discard)
+	logrus.SetFormatter(&logrus.JSONFormatter{})
 
 	logrus.AddHook(&writer.Hook{
 		Writer: io.MultiWriter(os.Stdout, logFile),

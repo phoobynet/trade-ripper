@@ -1,12 +1,16 @@
 import Dashboard from './routes/Dashboard'
 import { startSocket } from './socket'
 import { useAppStore } from './stores/useAppStore'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { VscDebugDisconnect } from 'react-icons/vsc'
 import { Route, Routes } from 'react-router-dom'
 
 export default function App() {
   const [showErrorOverlay, setShowErrorOverlay] = useState(false)
   const connectionStatus = useAppStore((state) => state.connectionStatus)
+  const restartSocketInterval = useRef<
+    ReturnType<typeof setInterval> | undefined
+  >()
 
   useEffect(() => {
     void (async () => {
@@ -22,7 +26,14 @@ export default function App() {
   useEffect(() => {
     if (connectionStatus === 'disconnected' || connectionStatus === 'error') {
       setShowErrorOverlay(true)
+      if (!restartSocketInterval.current) {
+        restartSocketInterval.current = setInterval(async () => {
+          await startSocket()
+        }, 3_000)
+      }
     } else if (connectionStatus === 'connected') {
+      clearInterval(restartSocketInterval.current)
+      restartSocketInterval.current = undefined
       setShowErrorOverlay(false)
     }
   }, [connectionStatus])
@@ -35,20 +46,18 @@ export default function App() {
             'absolute top-0 left-0 w-full h-full bg-red-500 text-white'
           }
         >
-          <div className={'flex flex-col space-y-10 items-center'}>
+          <div className={'flex flex-col space-y-6 items-center'}>
             <div className={'text-4xl text-center mt-10'}>
               Houston, we have a problem.
             </div>
-            <p>Check that the trade-ripper process is running.</p>
             <div>
-              <p className={'text-center'}>
-                You can run trade-ripper with the following command
-              </p>
-              <pre className={'mt-4'}>
-                trade-ripper -c <i>[crypto|us_equity]</i> -q{' '}
-                <i>my.questdb.host</i>:9009
-              </pre>
+              <VscDebugDisconnect size={56}> </VscDebugDisconnect>
             </div>
+            <p>Check that the trade-ripper process is running.</p>
+            <pre>
+              trade-ripper --class <i>[crypto|us_equity]</i> --host{' '}
+              <i>my.questdb.host</i> --postgres <i>8812</i> --influx <i>9009</i>
+            </pre>
           </div>
         </div>
       ) : (

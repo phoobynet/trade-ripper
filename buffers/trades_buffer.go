@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/queries"
 	"github.com/phoobynet/trade-ripper/server"
 	"github.com/phoobynet/trade-ripper/utils"
 	qdb "github.com/questdb/go-questdb-client"
@@ -18,8 +19,8 @@ const BatchSize = 2_000
 
 type TradesBuffer struct {
 	sender      *qdb.LineSender
-	totalTrades int
-	bufferCount int
+	totalTrades int64
+	bufferCount int64
 	buffer      []alpaca.TradeRow
 	ctx         context.Context
 	mu          sync.Mutex
@@ -27,8 +28,14 @@ type TradesBuffer struct {
 }
 
 func NewQuestBuffer(options configuration.Options) *TradesBuffer {
-	questDBAddress := fmt.Sprintf("%s", options.QuestDBURI)
-	logrus.Infof("Attempting to connect to %s", questDBAddress)
+	count, countErr := queries.Count(options)
+
+	if countErr != nil {
+		panic(countErr)
+	}
+
+	questDBAddress := fmt.Sprintf("%s:%d", options.DBHost, options.DBInfluxPort)
+	logrus.Infof("Connecting to %s", questDBAddress)
 
 	sender, err := qdb.NewLineSender(context.TODO(), qdb.WithAddress(questDBAddress))
 
@@ -39,9 +46,10 @@ func NewQuestBuffer(options configuration.Options) *TradesBuffer {
 	logrus.Infof("Attempting to connect to %s...CONNECTED", questDBAddress)
 
 	return &TradesBuffer{
-		sender:  sender,
-		ctx:     context.Background(),
-		options: options,
+		sender:      sender,
+		ctx:         context.Background(),
+		options:     options,
+		totalTrades: count,
 	}
 }
 

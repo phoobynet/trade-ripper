@@ -6,11 +6,11 @@ import (
 	"github.com/phoobynet/trade-ripper/buffers"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/loggers"
+	"github.com/phoobynet/trade-ripper/queries"
 	"github.com/phoobynet/trade-ripper/server"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
-	"time"
 )
 
 var quitChannel = make(chan os.Signal, 1)
@@ -21,10 +21,7 @@ var rawMessageChannel = make(chan []byte, 50_000)
 var tradesChannel = make(chan alpaca.TradeRow, 100_000)
 var errorsChannel = make(chan error, 100)
 var errorsReceived = 0
-var restartsInPeriod = 0
-var restarts = 0
-var lastRestartTime time.Time
-var tradeCount int
+var tradeCount int64
 
 func main() {
 	defer func() {
@@ -32,7 +29,21 @@ func main() {
 	}()
 
 	arg.MustParse(&options)
+
+	if options.DBInfluxPort == 0 {
+		options.DBInfluxPort = 9009
+	}
+
+	if options.DBPostgresPort == 0 {
+		options.DBPostgresPort = 8812
+	}
+
 	signal.Notify(quitChannel, os.Interrupt)
+
+	questDBErr := queries.InitQuestDB(options)
+	if questDBErr != nil {
+		panic(questDBErr)
+	}
 
 	go run(options)
 
