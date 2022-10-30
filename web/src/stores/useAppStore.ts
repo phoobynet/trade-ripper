@@ -1,12 +1,10 @@
 import { getClass } from '../api/getCount'
+import { LogMessage } from '../socket/Message'
 import { InstrumentClass } from '../types/InstrumentClass'
 import create from 'zustand'
 
 export interface AppStore {
-  errorsCount: number
-  errorMessages: string[]
-  infoMessages: string[]
-  restartCount: number
+  logMessages: LogMessage[]
   totalTrades: number
   instrumentClass?: InstrumentClass
   connectionStatus: 'connected' | 'disconnected' | 'error'
@@ -15,10 +13,7 @@ export interface AppStore {
 }
 
 export const useAppStore = create<AppStore>((set) => ({
-  errorsCount: 0,
-  errorMessages: [],
-  infoMessages: [],
-  restartCount: 0,
+  logMessages: [],
   totalTrades: 0,
   instrumentClass: undefined,
   connectionStatus: 'disconnected',

@@ -1,8 +1,5 @@
-import { AppStore, useAppStore } from '../stores/useAppStore'
-import { ErrorMessage } from './ErrorMessage'
-import { InfoMessage } from './InfoMessage'
-import { RestartMessage } from './RestartMessage'
-import { TradeCountMessage } from './TradeCountMessage'
+import { useAppStore } from '../stores/useAppStore'
+import { LogMessage } from './Message'
 import { takeRight } from 'lodash'
 
 let socket: WebSocket
@@ -37,43 +34,13 @@ export const startSocket = () => {
     }
 
     socket.onmessage = (ev: MessageEvent) => {
-      const j = JSON.parse(ev.data as string)
-
-      if ('type' in j) {
-        const messageType = j.type as string
-        if (messageType === 'error') {
-          const errorMessage = j as ErrorMessage
-          useAppStore.setState((state: AppStore) => ({
-            errorsCount: errorMessage.count,
-            errors: takeRight([...state.errorMessages, errorMessage.msg], 100),
-            connectionStatus: state.connectionStatus,
-            connectionEvent: undefined,
-          }))
-        } else if (messageType === 'info') {
-          const infoMessage = j as InfoMessage
-          useAppStore.setState((state: AppStore) => ({
-            infoMessages: takeRight(
-              [...state.infoMessages, infoMessage.msg],
-              100,
-            ),
-            connectionStatus: state.connectionStatus,
-            connectionEvent: undefined,
-          }))
-        } else if (messageType === 'restart') {
-          const restartMessage = j as RestartMessage
-          useAppStore.setState((state) => ({
-            restartCount: restartMessage.count,
-            connectionStatus: state.connectionStatus,
-            connectionEvent: undefined,
-          }))
-        } else if (messageType === 'tradeCount') {
-          const tradeCount = j as TradeCountMessage
-          useAppStore.setState((state) => ({
-            totalTrades: tradeCount.count,
-            connectionStatus: state.connectionStatus,
-            connectionEvent: undefined,
-          }))
-        }
+      try {
+        const logMessage = JSON.parse(ev.data as string) as LogMessage
+        useAppStore.setState((state) => ({
+          logMessages: takeRight([...state.logMessages, logMessage], 100),
+        }))
+      } catch (e) {
+        console.error('Error parsing message:', ev.data)
       }
     }
   })

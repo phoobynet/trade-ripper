@@ -1,3 +1,6 @@
-export interface Message {
-  type: 'error' | 'info' | 'restart' | 'tradeCount' | 'instrumentClass'
+export interface LogMessage {
+  level: string
+  msg: string
+  time: string
+  tradeCount?: number
 }

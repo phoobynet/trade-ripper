@@ -41,10 +41,10 @@ type TradeCountMessage struct {
 	Count int64 `json:"count"`
 }
 
-func Broadcast(message any) {
+func Broadcast(logEntry any) {
 	for _, c := range connectedClients {
 		if c != nil && c.conn != nil {
-			err := c.conn.WriteJSON(message)
+			err := c.conn.WriteJSON(logEntry)
 
 			if err != nil {
 				logrus.Errorf("Error writing message to client: %v", err)
@@ -88,22 +88,6 @@ func Run(options configuration.Options) {
 			})
 
 			connectedClients[clientID] = &client{conn: c}
-		}
-
-		// websocket.Conn bindings https://pkg.go.dev/github.com/fasthttp/websocket?tab=doc#pkg-index
-		var (
-			mt  int
-			msg []byte
-			err error
-		)
-		for {
-			if mt, msg, err = c.ReadMessage(); err != nil {
-				logrus.Panicf("Error reading message: %v", err)
-				break
-			}
-
-			// TODO: What do I do with the message?
-			logrus.Infof("recv: %s (%d)", msg, mt)
 		}
 	}))
 

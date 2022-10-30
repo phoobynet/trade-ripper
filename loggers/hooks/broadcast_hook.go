@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"fmt"
 	"github.com/phoobynet/trade-ripper/server"
 	"github.com/sirupsen/logrus"
 	"io"
@@ -21,29 +22,19 @@ func NewBroadcastHook() *BroadcastHook {
 }
 
 func (hook *BroadcastHook) Fire(entry *logrus.Entry) error {
-	line, err := entry.Bytes()
+	_, err := entry.Bytes()
 	if err != nil {
 		return err
 	}
 
-	switch entry.Level.String() {
-	case "panic":
-		fallthrough
-	case "fatal":
-		fallthrough
-	case "error":
-		errorCount += 1
-		server.Broadcast(server.ErrorMessage{
-			Message: server.Message{Type: "error"},
-			Msg:     string(line),
-			Count:   errorCount,
-		})
-	default:
-		server.Broadcast(server.InfoMessage{
-			Message: server.Message{Type: "info"},
-			Msg:     string(line),
-		})
-	}
+	logMessage := make(map[string]any)
+	logMessage["type"] = entry.Level.String()
+	logMessage["msg"] = entry.Message
+	logMessage["tradeTrades"] = entry.Data["totalTrades"]
+	logMessage["time"] = entry.Time
+	fmt.Printf("%+v", logMessage)
+
+	server.Broadcast(logMessage)
 
 	return nil
 }
