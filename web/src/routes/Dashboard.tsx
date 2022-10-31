@@ -71,7 +71,7 @@ export default function Dashboard() {
           ></Stat>
           <Stat
             title={'Trades today'}
-            value={numeral(count).format('0.00A')}
+            value={numeral(count).format('0.000a')}
             type={'info'}
           ></Stat>
         </section>
