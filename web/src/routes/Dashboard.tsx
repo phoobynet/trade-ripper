@@ -5,10 +5,9 @@ import { motion } from 'framer-motion'
 import numeral from 'numeral'
 import { useEffect, useRef, useState } from 'react'
 import { AiFillAlert } from 'react-icons/ai'
-import { sentenceCase } from 'sentence-case'
 
 export default function Dashboard() {
-  const totalTrades = useAppStore((state) => state.totalTrades)
+  const count = useAppStore((state) => state.count)
   const fetchClass = useAppStore((state) => state.fetchClass)
   const instrumentClass = useAppStore((state) => state.instrumentClass)
   const [secondsSinceLastCheckIn, setSecondsSinceLastCheckIn] =
@@ -67,12 +66,12 @@ export default function Dashboard() {
         <section className={'grid grid-cols-1 gap-2 md:grid-cols-2'}>
           <Stat
             title={'Class'}
-            value={sentenceCase(instrumentClass ?? 'loading')}
+            value={instrumentClass ?? 'loading'}
             type={'info'}
           ></Stat>
           <Stat
             title={'Trades today'}
-            value={numeral(totalTrades).format('0.00a')}
+            value={numeral(count).format('0.00A')}
             type={'info'}
           ></Stat>
         </section>

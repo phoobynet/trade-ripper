@@ -9,7 +9,6 @@ import (
 	"github.com/phoobynet/trade-ripper/utils"
 	qdb "github.com/questdb/go-questdb-client"
 	"github.com/sirupsen/logrus"
-	"strings"
 	"sync"
 	"time"
 )
@@ -27,12 +26,6 @@ type TradesBuffer struct {
 }
 
 func NewQuestBuffer(options configuration.Options) *TradesBuffer {
-	count, countErr := queries.Count(options)
-
-	if countErr != nil {
-		panic(countErr)
-	}
-
 	questDBAddress := fmt.Sprintf("%s:%d", options.DBHost, options.DBInfluxPort)
 	logrus.Infof("Connecting to %s", questDBAddress)
 
@@ -45,10 +38,9 @@ func NewQuestBuffer(options configuration.Options) *TradesBuffer {
 	logrus.Infof("Attempting to connect to %s...CONNECTED", questDBAddress)
 
 	return &TradesBuffer{
-		sender:      sender,
-		ctx:         context.Background(),
-		options:     options,
-		totalTrades: count,
+		sender:  sender,
+		ctx:     context.Background(),
+		options: options,
 	}
 }
 
@@ -57,21 +49,24 @@ func (q *TradesBuffer) Start() {
 
 	for range ticker.C {
 		q.flush()
+		count, countErr := queries.Count(q.options)
+
+		if countErr != nil {
+			panic(countErr)
+		}
+
 		tradeCountLog := logrus.WithFields(logrus.Fields{
-			"totalTrades": q.totalTrades,
+			"n": count,
 		})
-		tradeCountLog.Info("tradeCount")
+
+		tradeCountLog.Info("count")
 	}
 }
 
 func (q *TradesBuffer) Add(trade alpaca.TradeRow) {
-	if strings.HasSuffix(trade.Symbol, "TEST.A") {
-		return
-	}
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.bufferCount++
-	q.totalTrades += q.bufferCount
+	q.bufferCount += 1
 
 	q.buffer = append(q.buffer, trade)
 }
@@ -100,14 +95,13 @@ func (q *TradesBuffer) flush() {
 				logrus.Error("failed to send trade to quest: ", insertErr)
 			}
 		}
+		err := q.sender.Flush(q.ctx)
+
+		if err != nil {
+			logrus.Errorf("error inserting docs: %s", err)
+		}
 	}
 
 	q.bufferCount = 0
-	q.buffer = make([]alpaca.TradeRow, 0)
-
-	err := q.sender.Flush(q.ctx)
-
-	if err != nil {
-		logrus.Errorf("error inserting docs: %s", err)
-	}
+	q.buffer = q.buffer[:0]
 }

@@ -17,7 +17,7 @@ export interface Message {
 export interface AppStore {
   lastMessage: Date
   messages: Message[]
-  totalTrades: number
+  count: number
   instrumentClass?: InstrumentClass
   fetchClass: () => Promise<void>
 }
@@ -25,7 +25,7 @@ export interface AppStore {
 export const useAppStore = create<AppStore>((set) => ({
   lastMessage: new Date(),
   messages: [],
-  totalTrades: 0,
+  count: 0,
   instrumentClass: undefined,
   fetchClass: async () => {
     getClass().then((c) => set({ instrumentClass: c }))
@@ -38,20 +38,20 @@ eventSource.onmessage = (event) => {
   useAppStore.setState((state) => {
     const message = JSON.parse(event.data) as Message
 
-    let totalTrades = state.totalTrades
+    let totalTrades = state.count
 
-    if (message.message === 'tradeCount') {
+    if (message.message === 'count') {
       totalTrades = (
         message.data as {
-          totalTrades: number
+          n: number
         }
-      ).totalTrades
+      ).n
     }
 
     return {
       lastMessage: new Date(),
       messages: take([message, ...state.messages], 100),
-      totalTrades,
+      count: totalTrades,
     }
   })
 }

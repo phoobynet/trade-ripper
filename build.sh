@@ -6,4 +6,4 @@ npm run build
 popd || exit
 
 go build -ldflags "-s -w"
-echo built completed
+echo build completed
