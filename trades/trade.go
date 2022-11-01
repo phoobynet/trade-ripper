@@ -1,6 +1,6 @@
-package buffers
+package trades
 
-type TradeRow struct {
+type Trade struct {
 	Timestamp int64
 	Size      float64
 	Price     float64

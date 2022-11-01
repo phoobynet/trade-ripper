@@ -4,11 +4,11 @@ import (
 	"embed"
 	"github.com/alexflint/go-arg"
 	"github.com/phoobynet/trade-ripper/alpaca"
-	"github.com/phoobynet/trade-ripper/buffers"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/loggers"
 	"github.com/phoobynet/trade-ripper/queries"
 	"github.com/phoobynet/trade-ripper/server"
+	"github.com/phoobynet/trade-ripper/trades"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
@@ -59,7 +59,8 @@ func main() {
 func run(options configuration.Options) {
 	logrus.Info("Starting up Trade Reader...")
 
-	questTradeBuffer := buffers.NewQuestBuffer(options)
+	tradeWriter := trades.NewWriter(options)
+	questTradeBuffer := trades.NewBuffer(options, tradeWriter.Write)
 
 	sipReader = alpaca.NewTradeReader(&alpaca.TradeReaderConfig{
 		Key:               os.Getenv("APCA_API_KEY_ID"),
@@ -69,10 +70,6 @@ func run(options configuration.Options) {
 		ErrorsChannel:     errorsChannel,
 		Options:           options,
 	})
-
-	go func() {
-		questTradeBuffer.Start()
-	}()
 
 	go func() {
 		tradeReaderStartErr := sipReader.Start()
