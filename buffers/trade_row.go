@@ -1,4 +1,4 @@
-package alpaca
+package buffers
 
 type TradeRow struct {
 	Timestamp int64

@@ -2,26 +2,26 @@ package buffers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/queries"
 	qdb "github.com/questdb/go-questdb-client"
-	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
+	"strings"
 	"sync"
 	"time"
 )
 
-const BatchSize = 5_000
+const ()
 
 type TradesBuffer struct {
-	sender     *qdb.LineSender
-	bufferLock sync.Mutex
-	buffer     [][]byte
-	ctx        context.Context
-	options    configuration.Options
-	tradeCount int64
+	sender                  *qdb.LineSender
+	tradeBufferLock         sync.Mutex
+	ctx                     context.Context
+	options                 configuration.Options
+	tradeCount              int64
+	tradeBufferPendingCount int64
 }
 
 func NewQuestBuffer(options configuration.Options) *TradesBuffer {
@@ -64,48 +64,114 @@ func (q *TradesBuffer) Start() {
 }
 
 func (q *TradesBuffer) Add(rawMessage []byte) {
-	q.bufferLock.Lock()
-	defer q.bufferLock.Unlock()
-	q.buffer = append(q.buffer, rawMessage)
-}
+	q.tradeBufferLock.Lock()
+	defer q.tradeBufferLock.Unlock()
+	tradeRows, convertToTradeErr := q.convertToTrades(rawMessage)
 
-func (q *TradesBuffer) flush() {
-	q.bufferLock.Lock()
-	defer q.bufferLock.Unlock()
-	var insertErr error
-	var tradeRows []alpaca.TradeRow
-
-	for _, rawMessage := range q.buffer {
-		rows, conversionErr := alpaca.ConvertToTradeRows(rawMessage)
-		if conversionErr != nil {
-			logrus.Error(conversionErr)
-			continue
-		}
-
-		tradeRows = append(tradeRows, rows...)
+	if convertToTradeErr != nil {
+		logrus.Error(convertToTradeErr)
+		return
 	}
 
-	tradeBatches := lo.Chunk(tradeRows, BatchSize)
+	var insertErr error
 
-	for _, tradeBatch := range tradeBatches {
-		for _, trade := range tradeBatch {
-			if trade.Tks == "" {
-				insertErr = q.sender.Table(q.options.Class).Symbol("sy", trade.Symbol).Float64Column("s", trade.Size).Float64Column("p", trade.Price).At(q.ctx, trade.Timestamp)
-			} else {
-				insertErr = q.sender.Table(q.options.Class).Symbol("sy", trade.Symbol).Float64Column("s", trade.Size).Float64Column("p", trade.Price).StringColumn("tks", trade.Tks).StringColumn("b", trade.Base).StringColumn("q", trade.Quote).At(q.ctx, trade.Timestamp)
-			}
-
-			if insertErr != nil {
-				logrus.Error("failed to send trade to quest: ", insertErr)
-			}
+	for _, trade := range tradeRows {
+		if trade.Tks == "" {
+			insertErr = q.sender.Table(q.options.Class).Symbol("sy", trade.Symbol).Float64Column("s", trade.Size).Float64Column("p", trade.Price).At(q.ctx, trade.Timestamp)
+		} else {
+			insertErr = q.sender.Table(q.options.Class).Symbol("sy", trade.Symbol).Float64Column("s", trade.Size).Float64Column("p", trade.Price).StringColumn("tks", trade.Tks).StringColumn("b", trade.Base).StringColumn("q", trade.Quote).At(q.ctx, trade.Timestamp)
 		}
+
+		if insertErr != nil {
+			logrus.Error("failed to send trade to quest: ", insertErr)
+		}
+
+		q.tradeBufferPendingCount++
+
+		if q.tradeBufferPendingCount >= 1000 {
+			err := q.sender.Flush(q.ctx)
+
+			if err != nil {
+				logrus.Errorf("error inserting docs: %s", err)
+			}
+			q.tradeCount += q.tradeBufferPendingCount
+			q.tradeBufferPendingCount = 0
+		}
+	}
+}
+
+func (q *TradesBuffer) flush(forceFlush bool) {
+	if q.tradeBufferPendingCount >= 1_000 || forceFlush {
 		err := q.sender.Flush(q.ctx)
 
 		if err != nil {
 			logrus.Errorf("error inserting docs: %s", err)
 		}
+
+		q.tradeCount += q.tradeBufferPendingCount
+		q.tradeBufferPendingCount = 0
+	}
+}
+
+func (q *TradesBuffer) convertToTrades(rawMessageData []byte) ([]TradeRow, error) {
+	var inputMessages []map[string]any
+	var tradeRows []TradeRow
+
+	err := json.Unmarshal(rawMessageData, &inputMessages)
+
+	if err != nil {
+		return tradeRows, fmt.Errorf("failed to unmarshal raw message data: %w", err)
 	}
 
-	q.buffer = make([][]byte, 0)
-	q.tradeCount += int64(len(tradeRows))
+	var tradeRow TradeRow
+
+	for _, message := range inputMessages {
+		if t, exists := message["T"]; exists {
+			if t == "t" {
+				symbol := message["S"].(string)
+
+				if strings.HasSuffix(symbol, "TEST.A") {
+					continue
+				}
+
+				timestampRaw := message["t"].(string)
+
+				timestamp, timestampErr := time.Parse(time.RFC3339Nano, timestampRaw)
+
+				if timestampErr != nil {
+					logrus.Errorf("failed to parse timestamp %v", timestampRaw)
+					continue
+				}
+
+				tradeRow = TradeRow{
+					Symbol:    symbol,
+					Size:      message["s"].(float64),
+					Price:     message["p"].(float64),
+					Timestamp: timestamp.UnixNano(),
+				}
+
+				tks, tksExists := message["tks"]
+
+				if tksExists {
+					baseQuote := strings.Split(symbol, "/")
+					tradeRow.Tks = tks.(string)
+					tradeRow.Base = baseQuote[0]
+					tradeRow.Quote = baseQuote[1]
+				} else {
+					tradeRow.Tks = ""
+					tks = ""
+				}
+
+				tradeRows = append(tradeRows, tradeRow)
+			} else if t == "error" {
+				logrus.Errorf("alpaca error %v=>%v", message["code"], message["msg"])
+			} else if t == "success" {
+				logrus.Infof("alpaca success: %v", message["msg"])
+			} else if t == "subscription" {
+				logrus.Info("alpaca subscription message")
+			}
+		}
+	}
+
+	return tradeRows, nil
 }

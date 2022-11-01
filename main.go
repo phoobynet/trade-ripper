@@ -9,13 +9,11 @@ import (
 	"github.com/phoobynet/trade-ripper/loggers"
 	"github.com/phoobynet/trade-ripper/queries"
 	"github.com/phoobynet/trade-ripper/server"
+	"github.com/pkg/profile"
 	"github.com/sirupsen/logrus"
-	"log"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"runtime"
-	"runtime/pprof"
 )
 
 var (
@@ -30,19 +28,11 @@ var (
 )
 
 func main() {
+	defer profile.Start(profile.MemProfileHeap).Stop()
+
 	defer func() {
 		loggers.Close()
 	}()
-
-	f, err := os.Create("mem.prof")
-	if err != nil {
-		log.Fatal("could not create memory profile: ", err)
-	}
-	defer f.Close() // error handling omitted for example
-	runtime.GC()    // get up-to-date statistics
-	if err := pprof.WriteHeapProfile(f); err != nil {
-		log.Fatal("could not write memory profile: ", err)
-	}
 
 	arg.MustParse(&options)
 

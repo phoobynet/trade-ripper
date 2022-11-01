@@ -3,12 +3,13 @@ package alpaca
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/phoobynet/trade-ripper/buffers"
 	"github.com/sirupsen/logrus"
 	"strings"
 	"time"
 )
 
-func ConvertToTradeRows(rawMessageData []byte) ([]TradeRow, error) {
+func ConvertToTradeRows(rawMessageData []byte) ([]buffers.TradeRow, error) {
 	var inputMessages []map[string]any
 
 	err := json.Unmarshal(rawMessageData, &inputMessages)
@@ -17,9 +18,9 @@ func ConvertToTradeRows(rawMessageData []byte) ([]TradeRow, error) {
 		return nil, fmt.Errorf("failed to unmarshal raw message data: %w", err)
 	}
 
-	var tradeRows []TradeRow
+	var tradeRows []buffers.TradeRow
 
-	var tradeRow TradeRow
+	var tradeRow buffers.TradeRow
 
 	for _, message := range inputMessages {
 		if t, exists := message["T"]; exists {
@@ -39,7 +40,7 @@ func ConvertToTradeRows(rawMessageData []byte) ([]TradeRow, error) {
 					continue
 				}
 
-				tradeRow = TradeRow{
+				tradeRow = buffers.TradeRow{
 					Symbol:    symbol,
 					Size:      message["s"].(float64),
 					Price:     message["p"].(float64),
