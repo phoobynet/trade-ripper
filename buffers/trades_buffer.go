@@ -6,8 +6,8 @@ import (
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/queries"
-	"github.com/phoobynet/trade-ripper/utils"
 	qdb "github.com/questdb/go-questdb-client"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
@@ -16,13 +16,12 @@ import (
 const BatchSize = 5_000
 
 type TradesBuffer struct {
-	sender      *qdb.LineSender
-	totalTrades int64
-	bufferCount int64
-	buffer      []alpaca.TradeRow
-	ctx         context.Context
-	mu          sync.Mutex
-	options     configuration.Options
+	sender     *qdb.LineSender
+	bufferLock sync.Mutex
+	buffer     [][]byte
+	ctx        context.Context
+	options    configuration.Options
+	tradeCount int64
 }
 
 func NewQuestBuffer(options configuration.Options) *TradesBuffer {
@@ -45,43 +44,48 @@ func NewQuestBuffer(options configuration.Options) *TradesBuffer {
 }
 
 func (q *TradesBuffer) Start() {
+	tradeCount, tradeCountErr := queries.Count(q.options)
+
+	if tradeCountErr != nil {
+		panic(tradeCountErr)
+	}
+	q.tradeCount = tradeCount
+
 	ticker := time.NewTicker(1 * time.Second)
 
 	for range ticker.C {
 		q.flush()
-		count, countErr := queries.Count(q.options)
-
-		if countErr != nil {
-			panic(countErr)
-		}
-
 		tradeCountLog := logrus.WithFields(logrus.Fields{
-			"n": count,
+			"n": q.tradeCount,
 		})
 
 		tradeCountLog.Info("count")
 	}
 }
 
-func (q *TradesBuffer) Add(trade alpaca.TradeRow) {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-	q.bufferCount += 1
-
-	q.buffer = append(q.buffer, trade)
+func (q *TradesBuffer) Add(rawMessage []byte) {
+	q.bufferLock.Lock()
+	defer q.bufferLock.Unlock()
+	q.buffer = append(q.buffer, rawMessage)
 }
 
 func (q *TradesBuffer) flush() {
-	q.mu.Lock()
-	defer q.mu.Unlock()
+	q.bufferLock.Lock()
+	defer q.bufferLock.Unlock()
+	var insertErr error
+	var tradeRows []alpaca.TradeRow
 
-	if q.bufferCount == 0 {
-		return
+	for _, rawMessage := range q.buffer {
+		rows, conversionErr := alpaca.ConvertToTradeRows(rawMessage)
+		if conversionErr != nil {
+			logrus.Error(conversionErr)
+			continue
+		}
+
+		tradeRows = append(tradeRows, rows...)
 	}
 
-	tradeBatches := utils.Chunk(q.buffer, BatchSize)
-
-	var insertErr error
+	tradeBatches := lo.Chunk(tradeRows, BatchSize)
 
 	for _, tradeBatch := range tradeBatches {
 		for _, trade := range tradeBatch {
@@ -102,6 +106,6 @@ func (q *TradesBuffer) flush() {
 		}
 	}
 
-	q.bufferCount = 0
-	q.buffer = q.buffer[:0]
+	q.buffer = make([][]byte, 0)
+	q.tradeCount += int64(len(tradeRows))
 }

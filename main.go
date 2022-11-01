@@ -10,8 +10,12 @@ import (
 	"github.com/phoobynet/trade-ripper/queries"
 	"github.com/phoobynet/trade-ripper/server"
 	"github.com/sirupsen/logrus"
+	"log"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
+	"runtime/pprof"
 )
 
 var (
@@ -20,17 +24,25 @@ var (
 	quitChannel       = make(chan os.Signal, 1)
 	options           configuration.Options
 	sipReader         *alpaca.TradeReader
-	rawMessageChannel = make(chan []byte, 50_000)
-	tradesChannel     = make(chan alpaca.TradeRow, 100_000)
+	rawMessageChannel = make(chan []byte, 1_000)
 	errorsChannel     = make(chan error, 100)
 	errorsReceived    = 0
-	tradeCount        int64
 )
 
 func main() {
 	defer func() {
 		loggers.Close()
 	}()
+
+	f, err := os.Create("mem.prof")
+	if err != nil {
+		log.Fatal("could not create memory profile: ", err)
+	}
+	defer f.Close() // error handling omitted for example
+	runtime.GC()    // get up-to-date statistics
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		log.Fatal("could not write memory profile: ", err)
+	}
 
 	arg.MustParse(&options)
 
@@ -93,21 +105,12 @@ func run(options configuration.Options) {
 			_ = sipReader.Stop()
 			os.Exit(1)
 		case rawMessage := <-rawMessageChannel:
-			rows, err := alpaca.ConvertToTradeRows(rawMessage)
-
-			if err != nil {
-				panic(err)
-			}
-
-			for _, row := range rows {
-				tradesChannel <- row
-			}
-		case trade := <-tradesChannel:
-			questTradeBuffer.Add(trade)
-			tradeCount++
+			questTradeBuffer.Add(rawMessage)
 		case err := <-errorsChannel:
 			errorsReceived++
 			logrus.Error(err)
+		default:
+			logrus.Warn("Overloaded!")
 		}
 	}
 }
