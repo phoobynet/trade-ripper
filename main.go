@@ -9,7 +9,6 @@ import (
 	"github.com/phoobynet/trade-ripper/loggers"
 	"github.com/phoobynet/trade-ripper/queries"
 	"github.com/phoobynet/trade-ripper/server"
-	"github.com/pkg/profile"
 	"github.com/sirupsen/logrus"
 	_ "net/http/pprof"
 	"os"
@@ -22,14 +21,12 @@ var (
 	quitChannel       = make(chan os.Signal, 1)
 	options           configuration.Options
 	sipReader         *alpaca.TradeReader
-	rawMessageChannel = make(chan []byte, 1_000)
-	errorsChannel     = make(chan error, 100)
+	rawMessageChannel = make(chan []byte, 1)
+	errorsChannel     = make(chan error, 1)
 	errorsReceived    = 0
 )
 
 func main() {
-	defer profile.Start(profile.MemProfileHeap).Stop()
-
 	defer func() {
 		loggers.Close()
 	}()

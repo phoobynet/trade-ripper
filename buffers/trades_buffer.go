@@ -54,7 +54,7 @@ func (q *TradesBuffer) Start() {
 	ticker := time.NewTicker(1 * time.Second)
 
 	for range ticker.C {
-		q.flush()
+		q.flush(true)
 		tradeCountLog := logrus.WithFields(logrus.Fields{
 			"n": q.tradeCount,
 		})
@@ -66,7 +66,7 @@ func (q *TradesBuffer) Start() {
 func (q *TradesBuffer) Add(rawMessage []byte) {
 	q.tradeBufferLock.Lock()
 	defer q.tradeBufferLock.Unlock()
-	tradeRows, convertToTradeErr := q.convertToTrades(rawMessage)
+	tradeRows, convertToTradeErr := convertToTrades(rawMessage)
 
 	if convertToTradeErr != nil {
 		logrus.Error(convertToTradeErr)
@@ -101,7 +101,7 @@ func (q *TradesBuffer) Add(rawMessage []byte) {
 }
 
 func (q *TradesBuffer) flush(forceFlush bool) {
-	if q.tradeBufferPendingCount >= 1_000 || forceFlush {
+	if q.tradeBufferPendingCount >= 1_000 || (forceFlush && q.tradeBufferPendingCount > 0) {
 		err := q.sender.Flush(q.ctx)
 
 		if err != nil {
@@ -113,7 +113,7 @@ func (q *TradesBuffer) flush(forceFlush bool) {
 	}
 }
 
-func (q *TradesBuffer) convertToTrades(rawMessageData []byte) ([]TradeRow, error) {
+func convertToTrades(rawMessageData []byte) ([]TradeRow, error) {
 	var inputMessages []map[string]any
 	var tradeRows []TradeRow
 

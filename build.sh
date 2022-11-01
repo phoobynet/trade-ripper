@@ -2,6 +2,7 @@
 
 # Build
 pushd web || exit
+npm i --force
 npm run build
 popd || exit
 
