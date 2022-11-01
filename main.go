@@ -23,6 +23,7 @@ var (
 	rawMessageChannel = make(chan []byte, 1_000_000)
 	errorsChannel     = make(chan error, 1)
 	errorsReceived    = 0
+	tradeChannel      = make(chan []trades.Trade, 1_000)
 )
 
 func main() {
@@ -60,7 +61,7 @@ func run(options configuration.Options) {
 	logrus.Info("Starting up Trade Reader...")
 
 	tradeWriter := trades.NewWriter(options)
-	questTradeBuffer := trades.NewBuffer(options, tradeWriter.Write)
+	questTradeBuffer := trades.NewBuffer(options, tradeChannel)
 
 	sipReader = alpaca.NewTradeReader(&alpaca.TradeReaderConfig{
 		Key:               os.Getenv("APCA_API_KEY_ID"),

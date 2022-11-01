@@ -35,7 +35,7 @@ func NewWriter(options configuration.Options) *Writer {
 	}
 }
 
-func (w *Writer) Write(trade Trade) {
+func (w *Writer) Write(trades []Trade) {
 	w.flushLock.Lock()
 	defer w.flushLock.Unlock()
 

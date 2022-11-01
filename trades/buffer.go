@@ -15,16 +15,16 @@ type Buffer struct {
 	sender                  *qdb.LineSender
 	ctx                     context.Context
 	options                 configuration.Options
-	write                   func(Trade)
+	tradeChannel            chan []Trade
 	tradeCount              int64
 	tradeBufferPendingCount int64
 }
 
-func NewBuffer(options configuration.Options, write func(Trade)) *Buffer {
+func NewBuffer(options configuration.Options, tradeChannel chan []Trade) *Buffer {
 	return &Buffer{
-		ctx:     context.Background(),
-		options: options,
-		write:   write,
+		ctx:          context.Background(),
+		options:      options,
+		tradeChannel: tradeChannel,
 	}
 }
 
@@ -36,9 +36,7 @@ func (b *Buffer) Add(rawMessage []byte) {
 		return
 	}
 
-	for _, trade := range trades {
-		b.write(trade)
-	}
+	b.tradeChannel <- trades
 }
 
 func convertToTrades(rawMessageData []byte) ([]Trade, error) {
