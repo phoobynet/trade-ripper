@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-const ()
-
 type TradesBuffer struct {
 	sender                  *qdb.LineSender
 	tradeBufferLock         sync.Mutex
@@ -124,11 +122,12 @@ func convertToTrades(rawMessageData []byte) ([]TradeRow, error) {
 	}
 
 	var tradeRow TradeRow
+	var symbol string
 
 	for _, message := range inputMessages {
 		if t, exists := message["T"]; exists {
 			if t == "t" {
-				symbol := message["S"].(string)
+				symbol = message["S"].(string)
 
 				if strings.HasSuffix(symbol, "TEST.A") {
 					continue

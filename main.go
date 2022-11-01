@@ -10,7 +10,6 @@ import (
 	"github.com/phoobynet/trade-ripper/queries"
 	"github.com/phoobynet/trade-ripper/server"
 	"github.com/sirupsen/logrus"
-	_ "net/http/pprof"
 	"os"
 	"os/signal"
 )
@@ -21,7 +20,7 @@ var (
 	quitChannel       = make(chan os.Signal, 1)
 	options           configuration.Options
 	sipReader         *alpaca.TradeReader
-	rawMessageChannel = make(chan []byte, 1)
+	rawMessageChannel = make(chan []byte, 1_000_000)
 	errorsChannel     = make(chan error, 1)
 	errorsReceived    = 0
 )
@@ -96,8 +95,6 @@ func run(options configuration.Options) {
 		case err := <-errorsChannel:
 			errorsReceived++
 			logrus.Error(err)
-		default:
-			logrus.Warn("Overloaded!")
 		}
 	}
 }
