@@ -5,6 +5,7 @@ import (
 	"github.com/alexflint/go-arg"
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/database"
 	"github.com/phoobynet/trade-ripper/loggers"
 	"github.com/phoobynet/trade-ripper/queries"
 	"github.com/phoobynet/trade-ripper/server"
@@ -25,8 +26,8 @@ var (
 	rawMessageChannel = make(chan []byte, 1_000_000)
 	errorsChannel     = make(chan error, 1)
 	errorsReceived    = 0
-	tradesChannel     = make(chan []trades.Trade, 100_000)
-	tradesBuffer      = make([]trades.Trade, 0, 100_000)
+	tradesChannel     = make(chan []trades.Trade, 10_000)
+	tradesBuffer      = make([]trades.Trade, 0)
 	tradesWriterLock  = sync.Mutex{}
 )
 
@@ -51,7 +52,7 @@ func main() {
 
 	signal.Notify(quitChannel, os.Interrupt)
 
-	questDBErr := queries.InitQuestDB(options)
+	questDBErr := database.StartPostgresConnection(options)
 	if questDBErr != nil {
 		panic(questDBErr)
 	}
@@ -84,6 +85,11 @@ func run(options configuration.Options) {
 	})
 
 	go func() {
+		count, countErr := queries.Count(options)
+
+		if countErr != nil {
+			logrus.Panicf("Error counting trades: %s", countErr)
+		}
 		ticker := time.NewTicker(1 * time.Second)
 
 		for range ticker.C {
@@ -91,9 +97,18 @@ func run(options configuration.Options) {
 				tradesWriterLock.Lock()
 				defer tradesWriterLock.Unlock()
 
-				if len(tradesBuffer) > 0 {
+				l := int64(len(tradesBuffer))
+
+				if l > 0 {
 					tradeWriter.Write(tradesBuffer)
-					tradesBuffer = make([]trades.Trade, 0, 100_000)
+					tradesBuffer = make([]trades.Trade, 0)
+					count += l
+					server.Publish(map[string]any{
+						"message": "count",
+						"data": map[string]any{
+							"n": count,
+						},
+					})
 				}
 			}()
 		}

@@ -37,7 +37,7 @@ func (w *CryptoWriter) Write(trades []Trade) {
 	for _, chunk := range chunks {
 		for _, trade := range chunk {
 			table = w.sender.Table("crypto")
-			table.Symbol("symbol", trade["S"].(string))
+			table.Symbol("pair", trade["S"].(string))
 			table.Float64Column("size", trade["s"].(float64))
 			table.Float64Column("price", trade["p"].(float64))
 			table.StringColumn("tks", trade["tks"].(string))

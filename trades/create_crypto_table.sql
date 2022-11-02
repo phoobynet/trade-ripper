@@ -1,6 +1,6 @@
 CREATE TABLE if not exists 'crypto'
 (
-  ticker    SYMBOL capacity 256 CACHE,
+  pair capacity 256 CACHE,
   size      float,
   price     float,
   tks       text,

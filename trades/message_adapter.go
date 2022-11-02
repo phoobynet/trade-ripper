@@ -18,8 +18,6 @@ func Adapter(rawMessageData []byte) ([]Trade, error) {
 		return trades, fmt.Errorf("failed to unmarshal raw message data: %w", err)
 	}
 
-	var trade Trade
-
 	for _, message := range inputMessages {
 		if t, exists := message["T"]; exists {
 			if t == "t" {
@@ -33,7 +31,7 @@ func Adapter(rawMessageData []byte) ([]Trade, error) {
 				}
 
 				message["t"] = timestamp.UnixNano()
-				trades = append(trades, trade)
+				trades = append(trades, message)
 			} else if t == "error" {
 				logrus.Errorf("alpaca error %v=>%v", message["code"], message["msg"])
 			} else if t == "success" {
