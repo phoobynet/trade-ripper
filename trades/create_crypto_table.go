@@ -1,12 +1,15 @@
-package queries
+package trades
 
-import _ "embed"
+import (
+	_ "embed"
+	"github.com/phoobynet/trade-ripper/queries"
+)
 
 //go:embed create_crypto_table.sql
 var createCryptoTableSQL string
 
-func CreateCryptoTable() error {
-	db, err := GetQuestDB()
+func createCryptoTable() error {
+	db, err := queries.GetQuestDB()
 
 	if err != nil {
 		return err

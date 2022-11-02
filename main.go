@@ -12,6 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
+	"sync"
+	"time"
 )
 
 var (
@@ -23,7 +25,9 @@ var (
 	rawMessageChannel = make(chan []byte, 1_000_000)
 	errorsChannel     = make(chan error, 1)
 	errorsReceived    = 0
-	tradeChannel      = make(chan []trades.Trade, 1_000)
+	tradesChannel     = make(chan []trades.Trade, 100_000)
+	tradesBuffer      = make([]trades.Trade, 0, 100_000)
+	tradesWriterLock  = sync.Mutex{}
 )
 
 func main() {
@@ -60,8 +64,15 @@ func main() {
 func run(options configuration.Options) {
 	logrus.Info("Starting up Trade Reader...")
 
-	tradeWriter := trades.NewWriter(options)
-	questTradeBuffer := trades.NewBuffer(options, tradeChannel)
+	// invoke when we have accumulated enough trades to write to the database
+	var tradeWriter trades.TradeWriter
+	if options.Class == "crypto" {
+		tradeWriter = trades.NewCryptoWriter(options)
+	} else {
+		tradeWriter = trades.NewUSEquityWriter(options)
+	}
+
+	//questTradeBuffer := trades.NewBuffer(options, tradeChannel)
 
 	sipReader = alpaca.NewTradeReader(&alpaca.TradeReaderConfig{
 		Key:               os.Getenv("APCA_API_KEY_ID"),
@@ -71,6 +82,22 @@ func run(options configuration.Options) {
 		ErrorsChannel:     errorsChannel,
 		Options:           options,
 	})
+
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
+
+		for range ticker.C {
+			func() {
+				tradesWriterLock.Lock()
+				defer tradesWriterLock.Unlock()
+
+				if len(tradesBuffer) > 0 {
+					tradeWriter.Write(tradesBuffer)
+					tradesBuffer = make([]trades.Trade, 0, 100_000)
+				}
+			}()
+		}
+	}()
 
 	go func() {
 		tradeReaderStartErr := sipReader.Start()
@@ -89,7 +116,16 @@ func run(options configuration.Options) {
 			_ = sipReader.Stop()
 			os.Exit(1)
 		case rawMessage := <-rawMessageChannel:
-			questTradeBuffer.Add(rawMessage)
+			tradeMessages, adapterErr := trades.Adapter(rawMessage)
+
+			if adapterErr != nil {
+				logrus.Panicf("Error converting raw message to trade: %s", adapterErr)
+			}
+			tradesChannel <- tradeMessages
+		case tradeMessages := <-tradesChannel:
+			tradesWriterLock.Lock()
+			tradesBuffer = append(tradesBuffer, tradeMessages...)
+			tradesWriterLock.Unlock()
 		case err := <-errorsChannel:
 			errorsReceived++
 			logrus.Error(err)

@@ -1,12 +1,15 @@
-package queries
+package trades
 
-import _ "embed"
+import (
+	_ "embed"
+	"github.com/phoobynet/trade-ripper/queries"
+)
 
 //go:embed create_us_equity_table.sql
 var createUSEquityTableSQL string
 
-func CreateUSEquityTable() error {
-	db, err := GetQuestDB()
+func createUSEquityTable() error {
+	db, err := queries.GetQuestDB()
 
 	if err != nil {
 		return err

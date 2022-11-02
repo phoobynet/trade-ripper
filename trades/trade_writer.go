@@ -1,5 +1,5 @@
 package trades
 
 type TradeWriter interface {
-	Writer(trade Trade)
+	Write(trades []Trade)
 }

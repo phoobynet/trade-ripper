@@ -3,6 +3,7 @@ package queries
 import (
 	"fmt"
 	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/trades"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -17,13 +18,13 @@ func InitQuestDB(options configuration.Options) error {
 	}
 
 	questDB = db
-	cryptoErr := CreateCryptoTable()
+	cryptoErr := trades.CreateCryptoTable()
 
 	if cryptoErr != nil {
 		return cryptoErr
 	}
 
-	usEquityErr := CreateUSEquityTable()
+	usEquityErr := trades.CreateUSEquityTable()
 
 	if usEquityErr != nil {
 		return usEquityErr
