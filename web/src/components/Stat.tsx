@@ -1,12 +1,13 @@
-import { useMemo } from 'react'
+import { ReactNode, useMemo } from 'react'
 
 type Props = {
   title: string
-  value: string
+  comment?: string
+  value: string | ReactNode
   type?: 'info' | 'warning' | 'error'
 }
 
-export default function Stat({ title, value, type }: Props) {
+export default function Stat({ title, value, type, comment }: Props) {
   const textAccent = useMemo<string>(() => {
     switch (type) {
       case 'info':
@@ -35,7 +36,7 @@ export default function Stat({ title, value, type }: Props) {
 
   return (
     <div
-      className={`${borderAccent} border border-slate-500 p-2 rounded-md h-[100px] flex flex-col space-y-2`}
+      className={`${borderAccent} border border-slate-500 p-2 rounded-md h-[120px] flex flex-col space-y-2`}
     >
       <header>
         <div
@@ -48,6 +49,7 @@ export default function Stat({ title, value, type }: Props) {
         <div className={`text-4xl font-bold tabular-nums text-primary-content`}>
           {value}
         </div>
+        <div>{comment ?? <p>{comment}</p>}</div>
       </main>
     </div>
   )

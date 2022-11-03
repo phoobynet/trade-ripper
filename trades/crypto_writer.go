@@ -45,4 +45,6 @@ func (w *CryptoWriter) Write(trades []Trade) {
 		}
 		w.sender.Flush(w.ctx)
 	}
+
+	logrus.Infof("Inserted %d trades into 'crypto'", len(trades))
 }

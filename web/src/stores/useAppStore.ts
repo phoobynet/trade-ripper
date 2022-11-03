@@ -18,6 +18,8 @@ export interface AppStore {
   lastMessage: Date
   messages: Message[]
   count: number
+  rateBuffer: number[]
+  tradesPerSecond: number
   instrumentClass?: InstrumentClass
   fetchClass: () => Promise<void>
 }
@@ -26,6 +28,8 @@ export const useAppStore = create<AppStore>((set) => ({
   lastMessage: new Date(),
   messages: [],
   count: 0,
+  rateBuffer: [],
+  tradesPerSecond: 0,
   instrumentClass: undefined,
   fetchClass: async () => {
     getClass().then((c) => set({ instrumentClass: c }))
@@ -34,24 +38,39 @@ export const useAppStore = create<AppStore>((set) => ({
 
 const eventSource = new EventSource(`${sourceUrl}/events?stream=messages`)
 
+interface CountMessageData {
+  n: number
+}
+
 eventSource.onmessage = (event) => {
-  useAppStore.setState((state) => {
-    const message = JSON.parse(event.data) as Message
+  const message = JSON.parse(event.data) as Message
 
-    let totalTrades = state.count
+  if (message.message === 'count') {
+    useAppStore.setState((state) => {
+      let count = state.count
 
-    if (message.message === 'count') {
-      totalTrades = (
-        message.data as {
-          n: number
-        }
-      ).n
-    }
+      if (message.message === 'count') {
+        const countMessageData = message.data as CountMessageData
+        count = countMessageData.n
+      }
 
-    return {
-      lastMessage: new Date(),
-      messages: take([message, ...state.messages], 100),
-      count: totalTrades,
-    }
-  })
+      const rateBuffer = take([count - state.count, ...state.rateBuffer], 60)
+
+      const totalTradesInLastMinute = rateBuffer.reduce((a, b) => a + b, 0)
+
+      return {
+        messages: take([message, ...state.messages], 100),
+        count,
+        rateBuffer,
+        tradesPerSecond:
+          totalTradesInLastMinute > 0
+            ? totalTradesInLastMinute / rateBuffer.length
+            : 0,
+      }
+    })
+  }
+
+  useAppStore.setState((state) => ({
+    lastMessage: new Date(),
+  }))
 }

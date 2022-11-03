@@ -31,7 +31,6 @@ func NewUSEquityWriter(options configuration.Options) *USEquityWriter {
 
 // Write - writes and flushes the trades to QuestDB - recommended to be called when the trades collection reaches between 10 and 1000 objects
 func (w *USEquityWriter) Write(trades []Trade) {
-	logrus.Infof("Writing %d trades to QuestDB", len(trades))
 	chunks := lo.Chunk(trades, 1_000)
 
 	var table *qdb.LineSender
@@ -46,4 +45,6 @@ func (w *USEquityWriter) Write(trades []Trade) {
 		}
 		w.sender.Flush(w.ctx)
 	}
+
+	logrus.Infof("Inserted %d trades into 'us_equity'", len(trades))
 }

@@ -1,6 +1,6 @@
 CREATE TABLE if not exists 'crypto'
 (
-  pair capacity 256 CACHE,
+  pair symbol capacity 256 CACHE,
   size      float,
   price     float,
   tks       text,

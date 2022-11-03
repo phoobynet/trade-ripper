@@ -109,6 +109,10 @@ func run(options configuration.Options) {
 							"n": count,
 						},
 					})
+				} else {
+					server.Publish(map[string]any{
+						"message": "ping",
+					})
 				}
 			}()
 		}
