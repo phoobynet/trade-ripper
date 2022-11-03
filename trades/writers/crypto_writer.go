@@ -50,7 +50,11 @@ func (w *CryptoWriter) Write(trades []trades.Trade) {
 				logrus.Error("Error inserting crypto trade: ", insertErr)
 			}
 		}
-		w.sender.Flush(w.ctx)
+		flushErr := w.sender.Flush(w.ctx)
+
+		if flushErr != nil {
+			logrus.Panicf("Error flushing us_equity trades: %s", flushErr)
+		}
 	}
 
 	logrus.Infof("Inserted %d trades into 'crypto'", len(trades))

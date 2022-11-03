@@ -58,7 +58,11 @@ func (w *USEquityWriter) Write(trades []trades.Trade) {
 				logrus.Error("Error inserting us_equity trade: ", insertErr)
 			}
 		}
-		w.sender.Flush(w.ctx)
+		flushErr := w.sender.Flush(w.ctx)
+
+		if flushErr != nil {
+			logrus.Panicf("Error flushing us_equity trades: %s", flushErr)
+		}
 	}
 
 	logrus.Infof("Inserted %d trades into 'us_equity'", len(trades)-negate)
