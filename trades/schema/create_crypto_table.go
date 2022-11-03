@@ -1,4 +1,4 @@
-package trades
+package schema
 
 import (
 	_ "embed"
@@ -8,7 +8,7 @@ import (
 //go:embed create_crypto_table.sql
 var createCryptoTableSQL string
 
-func createCryptoTable() error {
+func CreateCryptoTable() error {
 	db, err := database.GetPostgresConnection()
 
 	if err != nil {

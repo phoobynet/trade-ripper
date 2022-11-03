@@ -10,6 +10,8 @@ import (
 	"github.com/phoobynet/trade-ripper/queries"
 	"github.com/phoobynet/trade-ripper/server"
 	"github.com/phoobynet/trade-ripper/trades"
+	"github.com/phoobynet/trade-ripper/trades/adapters"
+	"github.com/phoobynet/trade-ripper/trades/writers"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
@@ -66,11 +68,11 @@ func run(options configuration.Options) {
 	logrus.Info("Starting up Trade Reader...")
 
 	// invoke when we have accumulated enough trades to write to the database
-	var tradeWriter trades.TradeWriter
+	var tradeWriter writers.TradeWriter
 	if options.Class == "crypto" {
-		tradeWriter = trades.NewCryptoWriter(options)
+		tradeWriter = writers.NewCryptoWriter(options)
 	} else {
-		tradeWriter = trades.NewUSEquityWriter(options)
+		tradeWriter = writers.NewUSEquityWriter(options)
 	}
 
 	//questTradeBuffer := trades.NewBuffer(options, tradeChannel)
@@ -135,7 +137,7 @@ func run(options configuration.Options) {
 			_ = sipReader.Stop()
 			os.Exit(1)
 		case rawMessage := <-rawMessageChannel:
-			tradeMessages, adapterErr := trades.Adapter(rawMessage)
+			tradeMessages, adapterErr := adapters.AdaptRawMessageToTrades(rawMessage)
 
 			if adapterErr != nil {
 				logrus.Panicf("Error converting raw message to trade: %s", adapterErr)

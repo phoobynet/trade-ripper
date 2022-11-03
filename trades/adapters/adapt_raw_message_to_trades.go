@@ -1,21 +1,22 @@
-package trades
+package adapters
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/phoobynet/trade-ripper/trades"
 	"github.com/sirupsen/logrus"
 	"time"
 )
 
-// Adapter - converts the raw message from the websocket to a slice Trade maps type objects
-func Adapter(rawMessageData []byte) ([]Trade, error) {
+// AdaptRawMessageToTrades - converts the raw message from the websocket to a slice Trade maps type objects
+func AdaptRawMessageToTrades(rawMessageData []byte) ([]trades.Trade, error) {
 	var inputMessages []map[string]any
-	var trades []Trade
+	var result []trades.Trade
 
 	err := json.Unmarshal(rawMessageData, &inputMessages)
 
 	if err != nil {
-		return trades, fmt.Errorf("failed to unmarshal raw message data: %w", err)
+		return result, fmt.Errorf("failed to unmarshal raw message data: %w", err)
 	}
 
 	for _, message := range inputMessages {
@@ -31,7 +32,7 @@ func Adapter(rawMessageData []byte) ([]Trade, error) {
 				}
 
 				message["t"] = timestamp.UnixNano()
-				trades = append(trades, message)
+				result = append(result, message)
 			} else if t == "error" {
 				logrus.Errorf("alpaca error %v=>%v", message["code"], message["msg"])
 			} else if t == "success" {
@@ -42,5 +43,5 @@ func Adapter(rawMessageData []byte) ([]Trade, error) {
 		}
 	}
 
-	return trades, nil
+	return result, nil
 }

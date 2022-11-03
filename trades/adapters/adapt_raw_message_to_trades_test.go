@@ -1,10 +1,10 @@
-package trades
+package adapters
 
 import (
 	"testing"
 )
 
-func TestMessageAdapter(t *testing.T) {
+func Test_AdaptRawMessageToTrades(t *testing.T) {
 	rawMessage := []byte(`[{
   "T": "t",
   "i": 96921,
@@ -17,7 +17,7 @@ func TestMessageAdapter(t *testing.T) {
   "z": "C"
 }]`)
 
-	actual, err := Adapter(rawMessage)
+	actual, err := AdaptRawMessageToTrades(rawMessage)
 
 	if err != nil {
 		t.Errorf("failed to adapter message: %v", err)

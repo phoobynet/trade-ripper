@@ -4,5 +4,5 @@ CREATE TABLE if not exists 'crypto'
   size      float,
   price     float,
   tks       text,
-  t TIMESTAMP
-) timestamp(t) PARTITION BY DAY;
+  timestamp TIMESTAMP
+) timestamp(timestamp) PARTITION BY DAY;

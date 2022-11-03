@@ -1,4 +1,4 @@
-package trades
+package schema
 
 import (
 	_ "embed"
@@ -8,7 +8,7 @@ import (
 //go:embed create_us_equity_table.sql
 var createUSEquityTableSQL string
 
-func createUSEquityTable() error {
+func CreateUSEquityTable() error {
 	db, err := database.GetPostgresConnection()
 
 	if err != nil {

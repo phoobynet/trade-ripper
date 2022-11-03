@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func createSender(ctx context.Context, options configuration.Options) *qdb.LineSender {
+func CreateSender(ctx context.Context, options configuration.Options) *qdb.LineSender {
 	questDBAddress := fmt.Sprintf("%s:%d", options.DBHost, options.DBInfluxPort)
 	logrus.Infof("Connecting to %s", questDBAddress)
 

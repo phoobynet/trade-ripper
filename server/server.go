@@ -49,7 +49,6 @@ func Run(options configuration.Options, dist embed.FS) {
 			// Received Browser Disconnection
 			<-r.Context().Done()
 			println("The client is disconnected here")
-			return
 		}()
 
 		fmt.Printf("Client connected...\n")

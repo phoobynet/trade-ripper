@@ -3,7 +3,6 @@ package alpaca
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
-	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/server"
 	"github.com/sirupsen/logrus"
 	"net/url"
@@ -12,15 +11,12 @@ import (
 
 // TradeReader - https://alpaca.markets/docs/api-references/market-data-api/stock-pricing-data/realtime/
 type TradeReader struct {
-	conn                 *websocket.Conn
-	closed               bool
-	config               *TradeReaderConfig
-	restartCountInPeriod int
-	lastRestartTime      time.Time
-	lastMessageAt        time.Time
-	options              configuration.Options
-	socketURL            url.URL
-	restartCount         int
+	conn            *websocket.Conn
+	closed          bool
+	config          *TradeReaderConfig
+	lastRestartTime time.Time
+	lastMessageAt   time.Time
+	socketURL       url.URL
 }
 
 func NewTradeReader(config *TradeReaderConfig) *TradeReader {

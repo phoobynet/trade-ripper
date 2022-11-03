@@ -1,1 +1,1 @@
-select count(*) from 'crypto' where t >= timestamp_floor('d', now())
+select count(*) from 'crypto' where timestamp >= timestamp_floor('d', now())
