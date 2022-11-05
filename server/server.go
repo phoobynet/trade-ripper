@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"github.com/dgraph-io/badger/v3"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/r3labs/sse/v2"
 	"github.com/rs/cors"
@@ -11,6 +12,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"strings"
 )
 
 var (
@@ -38,7 +40,7 @@ func Publish(message any) {
 	})
 }
 
-func Run(options configuration.Options, dist embed.FS) {
+func Run(options configuration.Options, dist embed.FS, db *badger.DB) {
 	server = sse.New()
 	server.CreateStream("messages")
 
@@ -54,6 +56,25 @@ func Run(options configuration.Options, dist embed.FS) {
 		fmt.Printf("Client connected...\n")
 
 		server.ServeHTTP(w, r)
+	})
+
+	mux.HandleFunc("/trades/latest", func(w http.ResponseWriter, r *http.Request) {
+		symbol := r.URL.Query().Get("symbol")
+		db.View(func(txn *badger.Txn) error {
+			item, err := txn.Get([]byte(strings.ToUpper(symbol)))
+			if err != nil {
+				return err
+			}
+
+			err = item.Value(func(val []byte) error {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write(val)
+				return nil
+			})
+
+			return err
+		})
 	})
 
 	mux.HandleFunc("/api/class", func(w http.ResponseWriter, r *http.Request) {

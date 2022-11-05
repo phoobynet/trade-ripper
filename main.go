@@ -2,7 +2,9 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"github.com/alexflint/go-arg"
+	badger "github.com/dgraph-io/badger/v3"
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/database"
@@ -31,6 +33,7 @@ var (
 	tradesChannel     = make(chan []trades.Trade, 10_000)
 	tradesBuffer      = make([]trades.Trade, 0)
 	tradesWriterLock  = sync.Mutex{}
+	latestTradesDB    *badger.DB
 )
 
 func main() {
@@ -59,9 +62,21 @@ func main() {
 		panic(questDBErr)
 	}
 
+	var badgerErr error
+
+	latestTradesDB, badgerErr = badger.Open(badger.DefaultOptions("/latest_trades"))
+
+	if badgerErr != nil {
+		panic(badgerErr)
+	}
+
+	defer func(latestTradesDB *badger.DB) {
+		_ = latestTradesDB.Close()
+	}(latestTradesDB)
+
 	go run(options)
 
-	server.Run(options, dist)
+	server.Run(options, dist, latestTradesDB)
 }
 
 func run(options configuration.Options) {
@@ -74,8 +89,6 @@ func run(options configuration.Options) {
 	} else {
 		tradeWriter = writers.NewUSEquityWriter(options)
 	}
-
-	//questTradeBuffer := trades.NewBuffer(options, tradeChannel)
 
 	sipReader = alpaca.NewTradeReader(&alpaca.TradeReaderConfig{
 		Key:               os.Getenv("APCA_API_KEY_ID"),
@@ -145,6 +158,12 @@ func run(options configuration.Options) {
 			tradesChannel <- tradeMessages
 		case tradeMessages := <-tradesChannel:
 			tradesWriterLock.Lock()
+			_ = latestTradesDB.Update(func(txn *badger.Txn) error {
+				for _, trade := range tradeMessages {
+					_ = txn.Set([]byte(trade["S"].(string)), []byte(fmt.Sprintf("%6.4f,%6.4f,%d", trade["s"].(float64), trade["p"].(float64), trade["t"].(int64))))
+				}
+				return nil
+			})
 			tradesBuffer = append(tradesBuffer, tradeMessages...)
 			tradesWriterLock.Unlock()
 		case err := <-errorsChannel:
