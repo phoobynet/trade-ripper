@@ -48,6 +48,7 @@ func NewWebServer(options configuration.Options, dist embed.FS, db *badger.DB) *
 
 	mux.HandleFunc("/events", webServer.eventsHandler)
 	mux.HandleFunc("/trades/latest", webServer.tradesLatest)
+	mux.HandleFunc("/trades/symbols", webServer.tradesSymbols)
 	mux.HandleFunc("/api/class", webServer.tradesLatest)
 
 	fmt.Println("using embed mode")
@@ -183,5 +184,35 @@ func (ws *WebServer) Listen() {
 
 	if listenErr != nil {
 		log.Fatalln(listenErr)
+	}
+}
+
+func (ws *WebServer) tradesSymbols(w http.ResponseWriter, r *http.Request) {
+	symbols := make([]string, 0)
+	ws.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			k := item.Key()
+			symbols = append(symbols, string(k))
+		}
+		return nil
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	j, jErr := json.Marshal(symbols)
+
+	if jErr != nil {
+		logrus.Error(jErr)
+	}
+
+	_, writeErr := w.Write(j)
+	if writeErr != nil {
+		logrus.Error(writeErr)
 	}
 }
