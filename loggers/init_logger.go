@@ -2,6 +2,7 @@ package loggers
 
 import (
 	"fmt"
+	"github.com/phoobynet/trade-ripper/server"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/writer"
 	"io"
@@ -9,10 +10,12 @@ import (
 	"time"
 )
 
-var errorLogFile *os.File
-var logFile *os.File
+var (
+	errorLogFile *os.File
+	logFile      *os.File
+)
 
-func init() {
+func InitLogger(webServer *server.WebServer) {
 	now := time.Now().Format("20060102_150405")
 
 	lf, logFileErr := os.Create(fmt.Sprintf("trade_ripper_%s.log", now))
@@ -49,7 +52,7 @@ func init() {
 		},
 	})
 
-	logrus.AddHook(NewMessageStreamHook())
+	logrus.AddHook(NewMessageStreamHook(webServer))
 }
 
 func Close() {

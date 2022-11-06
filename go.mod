@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/alexflint/go-arg v1.4.3
+	github.com/dgraph-io/badger/v3 v3.2103.4
 	github.com/gorilla/websocket v1.5.0
 	github.com/lib/pq v1.10.2
 	github.com/questdb/go-questdb-client v0.0.0-20220912094445-fa4d7bd7b59e
@@ -19,7 +20,6 @@ require (
 	github.com/alexflint/go-scalar v1.1.0 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
-	github.com/dgraph-io/badger/v3 v3.2103.4 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

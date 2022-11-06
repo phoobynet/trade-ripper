@@ -3,7 +3,6 @@ package alpaca
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
-	"github.com/phoobynet/trade-ripper/server"
 	"github.com/sirupsen/logrus"
 	"net/url"
 	"time"
@@ -45,7 +44,7 @@ func (r *TradeReader) Stop() error {
 func (r *TradeReader) Start() error {
 	defer func() {
 		if rec := recover(); rec != nil {
-			server.Publish(map[string]any{
+			r.config.webServer.Publish(map[string]any{
 				"type":    "error",
 				"message": fmt.Sprintf("panic and recovered: %v", rec),
 			})

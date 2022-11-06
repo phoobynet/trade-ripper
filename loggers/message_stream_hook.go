@@ -12,12 +12,14 @@ import (
 type MessageStreamHook struct {
 	Writer    io.Writer
 	LogLevels []logrus.Level
+	webServer *server.WebServer
 }
 
-func NewMessageStreamHook() *MessageStreamHook {
+func NewMessageStreamHook(webServer *server.WebServer) *MessageStreamHook {
 	return &MessageStreamHook{
 		Writer:    io.Discard,
 		LogLevels: logrus.AllLevels,
+		webServer: webServer,
 	}
 }
 
@@ -26,7 +28,7 @@ func (hook *MessageStreamHook) Fire(entry *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	server.Publish(map[string]interface{}{
+	hook.webServer.Publish(map[string]interface{}{
 		"type":    entry.Level.String(),
 		"message": entry.Message,
 		"time":    entry.Time,

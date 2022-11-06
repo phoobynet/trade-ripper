@@ -4,7 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"github.com/alexflint/go-arg"
-	badger "github.com/dgraph-io/badger/v3"
+	"github.com/dgraph-io/badger/v3"
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/database"
@@ -34,9 +34,11 @@ var (
 	tradesBuffer      = make([]trades.Trade, 0)
 	tradesWriterLock  = sync.Mutex{}
 	latestTradesDB    *badger.DB
+	webServer         *server.WebServer
 )
 
 func main() {
+
 	defer func() {
 		loggers.Close()
 	}()
@@ -74,9 +76,13 @@ func main() {
 		_ = latestTradesDB.Close()
 	}(latestTradesDB)
 
+	webServer = server.NewWebServer(options, dist, latestTradesDB)
+
+	loggers.InitLogger(webServer)
+
 	go run(options)
 
-	server.Run(options, dist, latestTradesDB)
+	webServer.Listen()
 }
 
 func run(options configuration.Options) {
@@ -118,14 +124,14 @@ func run(options configuration.Options) {
 					tradeWriter.Write(tradesBuffer)
 					tradesBuffer = make([]trades.Trade, 0)
 					count += l
-					server.Publish(map[string]any{
+					webServer.Publish(map[string]any{
 						"message": "count",
 						"data": map[string]any{
 							"n": count,
 						},
 					})
 				} else {
-					server.Publish(map[string]any{
+					webServer.Publish(map[string]any{
 						"message": "ping",
 					})
 				}
