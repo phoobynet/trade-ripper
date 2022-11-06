@@ -12,7 +12,9 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type WebServer struct {
@@ -103,7 +105,7 @@ func (ws *WebServer) tradesLatest(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		ws.db.View(func(txn *badger.Txn) error {
-			var trades []map[string]any
+			trades := make(map[string]any)
 
 			for _, symbol := range strings.Split(symbols, ",") {
 				trade, err := txn.Get([]byte(strings.ToUpper(symbol)))
@@ -117,12 +119,36 @@ func (ws *WebServer) tradesLatest(w http.ResponseWriter, r *http.Request) {
 
 				tradeErr := trade.Value(func(val []byte) error {
 					tokens := strings.Split(string(val), ",")
-					trades = append(trades, map[string]any{
-						"symbol":    symbol,
-						"size":      tokens[0],
-						"price":     tokens[1],
-						"timestamp": tokens[2],
-					})
+					size, sizeErr := strconv.ParseFloat(tokens[0], 64)
+					if sizeErr != nil {
+						return sizeErr
+					}
+					price, priceErr := strconv.ParseFloat(tokens[1], 64)
+
+					if priceErr != nil {
+						return priceErr
+					}
+
+					timestamp, timestampErr := strconv.ParseInt(tokens[2], 10, 64)
+
+					if timestampErr != nil {
+						return timestampErr
+					}
+
+					if ws.options.Class == "crypto" {
+						trades[symbol] = map[string]any{
+							"size":      size,
+							"price":     price,
+							"timestamp": time.Unix(0, timestamp),
+							"tks":       tokens[3],
+						}
+					} else {
+						trades[symbol] = map[string]any{
+							"size":      size,
+							"price":     price,
+							"timestamp": time.Unix(0, timestamp),
+						}
+					}
 
 					return nil
 				})

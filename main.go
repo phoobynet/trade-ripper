@@ -66,7 +66,7 @@ func main() {
 
 	var badgerErr error
 
-	latestTradesDB, badgerErr = badger.Open(badger.DefaultOptions("/latest_trades"))
+	latestTradesDB, badgerErr = badger.Open(badger.DefaultOptions("latest_trades"))
 
 	if badgerErr != nil {
 		panic(badgerErr)
@@ -166,7 +166,12 @@ func run(options configuration.Options) {
 			tradesWriterLock.Lock()
 			_ = latestTradesDB.Update(func(txn *badger.Txn) error {
 				for _, trade := range tradeMessages {
-					_ = txn.Set([]byte(trade["S"].(string)), []byte(fmt.Sprintf("%6.4f,%6.4f,%d", trade["s"].(float64), trade["p"].(float64), trade["t"].(int64))))
+					if options.Class == "crypto" {
+						tks, _ := trade["tks"]
+						_ = txn.Set([]byte(trade["S"].(string)), []byte(fmt.Sprintf("%6.4f,%6.4f,%d,%s", trade["s"].(float64), trade["p"].(float64), trade["t"].(int64), tks)))
+					} else {
+						_ = txn.Set([]byte(trade["S"].(string)), []byte(fmt.Sprintf("%6.4f,%6.4f,%d", trade["s"].(float64), trade["p"].(float64), trade["t"].(int64))))
+					}
 				}
 				return nil
 			})
