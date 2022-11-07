@@ -1,12 +1,4 @@
-# Sipper Ripper CLI
-
-## Danger here
-
-This is a first stab (in Go) at doing this, so there a few untested things (who am I kidding - there are no tests). I'd
-previously attempted this in Node.js with TimescaleDB as the database, but wasn't very successful (zombie sockets, slow
-client errors, crying, loss of bladder control, general suffering). Go and QuestDB saved me.
-
-**No guarantees - use it at your own risk.**
+# Trade Ripper
 
 ## What is this?
 
@@ -15,9 +7,17 @@ an [Alpaca Markets data subscription](https://alpaca.markets/docs/api-references
 have access to all trades going through
 the [Securities Information Processor](https://polygon.io/blog/understanding-the-sips/).
 
-This app captures all trades (not quotes or bars), and writes the *Symbol*, *Price*, *Size*, *Timestamp* and*tks* (
+This app captures all trades (not quotes or bars), and writes the *Symbol*, *Price*, *Size*, *Timestamp* and *tks* (
 crypto only) to
 a [QuestDB](https://questdb.io/docs/) database. Fields such as trading conditions, exchange and tape are thrown away.
+
+## Warning
+
+This is a first stab (in Go) at doing this, so there a few untested things (who am I kidding - there are no tests). I'd
+previously attempted this in Node.js with TimescaleDB as the database, but wasn't very successful (zombie sockets, slow
+client errors, crying, loss of bladder control, general suffering). Go and QuestDB saved me.
+
+**No guarantees - use it at your own risk.**
 
 ## Why QuestDB?
 
