@@ -49,7 +49,7 @@ func NewWebServer(options configuration.Options, dist embed.FS, db *badger.DB) *
 	mux.HandleFunc("/events", webServer.eventsHandler)
 	mux.HandleFunc("/trades/latest", webServer.tradesLatest)
 	mux.HandleFunc("/trades/symbols", webServer.tradesSymbols)
-	mux.HandleFunc("/api/class", webServer.tradesLatest)
+	mux.HandleFunc("/api/class", webServer.class)
 
 	fmt.Println("using embed mode")
 	fsys, distFSErr := fs.Sub(dist, "dist")
