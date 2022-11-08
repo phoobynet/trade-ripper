@@ -112,6 +112,12 @@ func run(options configuration.Options) {
 				}
 
 				indexConstituents = append(indexConstituents, nasdaq100...)
+			} else if index == "djia" {
+				djia, djiaErr := scrapers.GetDJIA()
+				if djiaErr != nil {
+					logrus.Fatalln(djiaErr)
+				}
+				indexConstituents = append(indexConstituents, djia...)
 			}
 		}
 
