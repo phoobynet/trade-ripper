@@ -49,7 +49,7 @@ func (r *TradeReader) Start() error {
 				"message": fmt.Sprintf("panic and recovered: %v", rec),
 			})
 
-			logrus.Error("recovering from panic: ", rec)
+			logrus.Error("recovering from reader panic: ", rec)
 			time.Sleep(2 * time.Second)
 			restartErr := r.Start()
 

@@ -3,15 +3,15 @@ package adapters
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/phoobynet/trade-ripper/trades"
+	"github.com/phoobynet/trade-ripper/tradesdb"
 	"github.com/sirupsen/logrus"
 	"time"
 )
 
 // AdaptRawMessageToTrades - converts the raw message from the websocket to a slice Trade maps type objects
-func AdaptRawMessageToTrades(rawMessageData []byte) ([]trades.Trade, error) {
+func AdaptRawMessageToTrades(rawMessageData []byte) ([]tradesdb.Trade, error) {
 	var inputMessages []map[string]any
-	var result []trades.Trade
+	var result []tradesdb.Trade
 
 	err := json.Unmarshal(rawMessageData, &inputMessages)
 

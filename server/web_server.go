@@ -4,28 +4,26 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"github.com/dgraph-io/badger/v3"
 	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/tradeskv"
 	"github.com/r3labs/sse/v2"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"io/fs"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 )
 
 type WebServer struct {
-	options     configuration.Options
-	db          *badger.DB
-	sseServer   *sse.Server
-	mux         *http.ServeMux
-	corsOptions *cors.Cors
+	options               configuration.Options
+	latestTradeRepository *tradeskv.LatestTradeRepository
+	sseServer             *sse.Server
+	mux                   *http.ServeMux
+	corsOptions           *cors.Cors
 }
 
-func NewWebServer(options configuration.Options, dist embed.FS, db *badger.DB) *WebServer {
+func NewWebServer(options configuration.Options, dist embed.FS, latestTradeRepository *tradeskv.LatestTradeRepository) *WebServer {
 	sseServer := sse.New()
 	sseServer.CreateStream("messages")
 
@@ -40,7 +38,7 @@ func NewWebServer(options configuration.Options, dist embed.FS, db *badger.DB) *
 
 	webServer := &WebServer{
 		options,
-		db,
+		latestTradeRepository,
 		sseServer,
 		mux,
 		corsOptions,
@@ -51,7 +49,6 @@ func NewWebServer(options configuration.Options, dist embed.FS, db *badger.DB) *
 	mux.HandleFunc("/trades/symbols", webServer.tradesSymbols)
 	mux.HandleFunc("/api/class", webServer.class)
 
-	fmt.Println("using embed mode")
 	fsys, distFSErr := fs.Sub(dist, "dist")
 
 	if distFSErr != nil {
@@ -99,76 +96,40 @@ func (ws *WebServer) eventsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ws *WebServer) tradesLatest(w http.ResponseWriter, r *http.Request) {
-	symbols := r.URL.Query().Get("symbols")
+	tickersQuery := r.URL.Query().Get("tickers")
 
-	if symbols == "" {
+	if tickersQuery == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	} else {
-		ws.db.View(func(txn *badger.Txn) error {
-			trades := make(map[string]any)
+		tickers := strings.Split(tickersQuery, ",")
+		trades, latestTradeErr := ws.latestTradeRepository.Get(tickers)
 
-			for _, symbol := range strings.Split(symbols, ",") {
-				trade, err := txn.Get([]byte(strings.ToUpper(symbol)))
-				if err != nil {
-					if err == badger.ErrKeyNotFound {
-						continue
-					} else {
-						return err
-					}
-				}
+		if latestTradeErr != nil {
+			logrus.Error(latestTradeErr)
+			_, _ = w.Write([]byte(latestTradeErr.Error()))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-				tradeErr := trade.Value(func(val []byte) error {
-					tokens := strings.Split(string(val), ",")
-					size, sizeErr := strconv.ParseFloat(tokens[0], 64)
-					if sizeErr != nil {
-						return sizeErr
-					}
-					price, priceErr := strconv.ParseFloat(tokens[1], 64)
+		w.Header().Set("Content-Type", "application/json")
+		j, jErr := json.Marshal(trades)
+		if jErr != nil {
+			logrus.Error(jErr)
+			_, _ = w.Write([]byte(jErr.Error()))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-					if priceErr != nil {
-						return priceErr
-					}
+		_, writeErr := w.Write(j)
 
-					timestamp, timestampErr := strconv.ParseInt(tokens[2], 10, 64)
-
-					if timestampErr != nil {
-						return timestampErr
-					}
-
-					if ws.options.Class == "crypto" {
-						trades[symbol] = map[string]any{
-							"size":      size,
-							"price":     price,
-							"timestamp": time.Unix(0, timestamp),
-							"tks":       tokens[3],
-						}
-					} else {
-						trades[symbol] = map[string]any{
-							"size":      size,
-							"price":     price,
-							"timestamp": time.Unix(0, timestamp),
-						}
-					}
-
-					return nil
-				})
-
-				if tradeErr != nil {
-					logrus.Error(tradeErr)
-				}
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			j, jErr := json.Marshal(trades)
-			if jErr != nil {
-				return jErr
-			}
-
-			_, writeErr := w.Write(j)
-
-			return writeErr
-		})
+		if writeErr != nil {
+			logrus.Error(writeErr)
+			_, _ = w.Write([]byte(writeErr.Error()))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -188,24 +149,18 @@ func (ws *WebServer) Listen() {
 }
 
 func (ws *WebServer) tradesSymbols(w http.ResponseWriter, r *http.Request) {
-	symbols := make([]string, 0)
-	ws.db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchValues = false
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			k := item.Key()
-			symbols = append(symbols, string(k))
-		}
-		return nil
-	})
+	tickers, tickersErr := ws.latestTradeRepository.GetKeys()
+
+	if tickersErr != nil {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(tickersErr.Error()))
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	j, jErr := json.Marshal(symbols)
+	j, jErr := json.Marshal(tickers)
 
 	if jErr != nil {
 		logrus.Error(jErr)

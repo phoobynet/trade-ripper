@@ -3,8 +3,9 @@ package writers
 import (
 	"context"
 	"github.com/phoobynet/trade-ripper/configuration"
-	"github.com/phoobynet/trade-ripper/trades"
-	"github.com/phoobynet/trade-ripper/trades/schema"
+	"github.com/phoobynet/trade-ripper/tradesdb"
+	"github.com/phoobynet/trade-ripper/tradesdb/influx"
+	"github.com/phoobynet/trade-ripper/tradesdb/schema"
 	qdb "github.com/questdb/go-questdb-client"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
@@ -24,7 +25,7 @@ func NewUSEquityWriter(options configuration.Options) *USEquityWriter {
 	}
 
 	ctx := context.TODO()
-	sender := trades.CreateSender(ctx, options)
+	sender := influx.CreateSender(ctx, options)
 
 	return &USEquityWriter{
 		sender: sender,
@@ -33,7 +34,7 @@ func NewUSEquityWriter(options configuration.Options) *USEquityWriter {
 }
 
 // Write - writes and flushes the trades to QuestDB - recommended to be called when the trades collection reaches between 10 and 1000 objects
-func (w *USEquityWriter) Write(trades []trades.Trade) {
+func (w *USEquityWriter) Write(trades []tradesdb.Trade) {
 	chunks := lo.Chunk(trades, 1_000)
 
 	var table *qdb.LineSender

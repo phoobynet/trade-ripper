@@ -1,3 +1,3 @@
-package trades
+package tradesdb
 
 type Trade map[string]any

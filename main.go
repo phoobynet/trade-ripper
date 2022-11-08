@@ -2,18 +2,19 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	"github.com/alexflint/go-arg"
-	"github.com/dgraph-io/badger/v3"
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/configuration"
-	"github.com/phoobynet/trade-ripper/database"
 	"github.com/phoobynet/trade-ripper/loggers"
-	"github.com/phoobynet/trade-ripper/queries"
+	"github.com/phoobynet/trade-ripper/scrapers"
 	"github.com/phoobynet/trade-ripper/server"
-	"github.com/phoobynet/trade-ripper/trades"
-	"github.com/phoobynet/trade-ripper/trades/adapters"
-	"github.com/phoobynet/trade-ripper/trades/writers"
+	"github.com/phoobynet/trade-ripper/tradesdb"
+	"github.com/phoobynet/trade-ripper/tradesdb/adapters"
+	"github.com/phoobynet/trade-ripper/tradesdb/postgres"
+	"github.com/phoobynet/trade-ripper/tradesdb/queries"
+	"github.com/phoobynet/trade-ripper/tradesdb/writers"
+	"github.com/phoobynet/trade-ripper/tradeskv"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
@@ -23,18 +24,18 @@ import (
 
 var (
 	//go:embed dist
-	dist              embed.FS
-	quitChannel       = make(chan os.Signal, 1)
-	options           configuration.Options
-	sipReader         *alpaca.TradeReader
-	rawMessageChannel = make(chan []byte, 1_000_000)
-	errorsChannel     = make(chan error, 1)
-	errorsReceived    = 0
-	tradesChannel     = make(chan []trades.Trade, 10_000)
-	tradesBuffer      = make([]trades.Trade, 0)
-	tradesWriterLock  = sync.Mutex{}
-	latestTradesDB    *badger.DB
-	webServer         *server.WebServer
+	dist                  embed.FS
+	quitChannel           = make(chan os.Signal, 1)
+	options               configuration.Options
+	sipReader             *alpaca.TradeReader
+	rawMessageChannel     = make(chan []byte, 1_000_000)
+	errorsChannel         = make(chan error, 1)
+	errorsReceived        = 0
+	tradesChannel         = make(chan []tradesdb.Trade, 10_000)
+	tradesBuffer          = make([]tradesdb.Trade, 0)
+	tradesWriterLock      = sync.Mutex{}
+	latestTradeRepository *tradeskv.LatestTradeRepository
+	webServer             *server.WebServer
 )
 
 func main() {
@@ -59,24 +60,18 @@ func main() {
 
 	signal.Notify(quitChannel, os.Interrupt)
 
-	questDBErr := database.StartPostgresConnection(options)
+	questDBErr := postgres.Start(options)
 	if questDBErr != nil {
 		panic(questDBErr)
 	}
 
-	var badgerErr error
+	latestTradeRepository = tradeskv.NewLatestRepository(options)
 
-	latestTradesDB, badgerErr = badger.Open(badger.DefaultOptions("latest_trades"))
+	defer func(repository *tradeskv.LatestTradeRepository) {
+		repository.Close()
+	}(latestTradeRepository)
 
-	if badgerErr != nil {
-		panic(badgerErr)
-	}
-
-	defer func(latestTradesDB *badger.DB) {
-		_ = latestTradesDB.Close()
-	}(latestTradesDB)
-
-	webServer = server.NewWebServer(options, dist, latestTradesDB)
+	webServer = server.NewWebServer(options, dist, latestTradeRepository)
 
 	loggers.InitLogger(webServer)
 
@@ -96,10 +91,50 @@ func run(options configuration.Options) {
 		tradeWriter = writers.NewUSEquityWriter(options)
 	}
 
+	symbols := make([]string, 0)
+
+	indexConstituents := make([]scrapers.IndexConstituent, 0)
+
+	if options.Indexes != nil && len(options.Indexes) > 0 {
+		for _, index := range options.Indexes {
+			if index == "sp500" {
+				sp500, sp500Err := scrapers.GetSP500()
+				if sp500Err != nil {
+					logrus.Fatalln(sp500Err)
+				}
+
+				indexConstituents = append(indexConstituents, sp500...)
+			} else if index == "nasdaq100" {
+				nasdaq100, nasdaq100Err := scrapers.GetNASDAQ100()
+				if nasdaq100Err != nil {
+					logrus.Fatalln(nasdaq100Err)
+				}
+
+				indexConstituents = append(indexConstituents, nasdaq100...)
+			}
+		}
+
+		if len(indexConstituents) > 0 {
+			options.Class = "us_equity"
+			indexConstituentsSymbols := make([]string, 0)
+
+			for _, ic := range indexConstituents {
+				indexConstituentsSymbols = append(indexConstituentsSymbols, ic.Ticker)
+			}
+
+			symbols = lo.Uniq[string](indexConstituentsSymbols)
+
+		} else {
+			logrus.Fatalln("No valid market indexes found")
+		}
+	} else {
+		symbols = append(symbols, "*")
+	}
+
 	sipReader = alpaca.NewTradeReader(&alpaca.TradeReaderConfig{
 		Key:               os.Getenv("APCA_API_KEY_ID"),
 		Secret:            os.Getenv("APCA_API_SECRET_KEY"),
-		Symbols:           []string{"*"},
+		Symbols:           symbols,
 		RawMessageChannel: rawMessageChannel,
 		ErrorsChannel:     errorsChannel,
 		Options:           options,
@@ -122,7 +157,7 @@ func run(options configuration.Options) {
 
 				if l > 0 {
 					tradeWriter.Write(tradesBuffer)
-					tradesBuffer = make([]trades.Trade, 0)
+					tradesBuffer = make([]tradesdb.Trade, 0)
 					count += l
 					webServer.Publish(map[string]any{
 						"message": "count",
@@ -164,18 +199,11 @@ func run(options configuration.Options) {
 			tradesChannel <- tradeMessages
 		case tradeMessages := <-tradesChannel:
 			tradesWriterLock.Lock()
-			_ = latestTradesDB.Update(func(txn *badger.Txn) error {
-				for _, trade := range tradeMessages {
-					if options.Class == "crypto" {
-						tks, _ := trade["tks"]
-						_ = txn.Set([]byte(trade["S"].(string)), []byte(fmt.Sprintf("%6.4f,%6.4f,%d,%s", trade["s"].(float64), trade["p"].(float64), trade["t"].(int64), tks)))
-					} else {
-						_ = txn.Set([]byte(trade["S"].(string)), []byte(fmt.Sprintf("%6.4f,%6.4f,%d", trade["s"].(float64), trade["p"].(float64), trade["t"].(int64))))
-					}
-				}
-				return nil
-			})
 			tradesBuffer = append(tradesBuffer, tradeMessages...)
+			latestTradeUpdateErr := latestTradeRepository.Update(tradeMessages)
+			if latestTradeUpdateErr != nil {
+				logrus.Error(latestTradeUpdateErr)
+			}
 			tradesWriterLock.Unlock()
 		case err := <-errorsChannel:
 			errorsReceived++

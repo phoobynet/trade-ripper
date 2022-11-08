@@ -1,4 +1,4 @@
-package database
+package postgres
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func StartPostgresConnection(options configuration.Options) error {
+func Start(options configuration.Options) error {
 	dsn := fmt.Sprintf("host=%s user=admin password=quest dbname=qdb port=%d sslmode=disable", options.DBHost, options.DBPostgresPort)
 
 	questDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})

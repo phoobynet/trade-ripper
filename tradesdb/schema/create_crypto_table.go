@@ -2,14 +2,14 @@ package schema
 
 import (
 	_ "embed"
-	"github.com/phoobynet/trade-ripper/database"
+	"github.com/phoobynet/trade-ripper/tradesdb/postgres"
 )
 
 //go:embed create_crypto_table.sql
 var createCryptoTableSQL string
 
 func CreateCryptoTable() error {
-	db, err := database.GetPostgresConnection()
+	db, err := postgres.Get()
 
 	if err != nil {
 		return err

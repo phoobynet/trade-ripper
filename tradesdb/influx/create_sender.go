@@ -1,4 +1,4 @@
-package trades
+package influx
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// CreateSender - Creates a new sender for the trades database using the high performance Influx line protocol
 func CreateSender(ctx context.Context, options configuration.Options) *qdb.LineSender {
 	questDBAddress := fmt.Sprintf("%s:%d", options.DBHost, options.DBInfluxPort)
 	logrus.Infof("Connecting to %s", questDBAddress)

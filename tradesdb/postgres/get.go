@@ -1,4 +1,4 @@
-package database
+package postgres
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func GetPostgresConnection() (*gorm.DB, error) {
+func Get() (*gorm.DB, error) {
 	if db == nil {
 		return nil, fmt.Errorf("questDB is nil.  You need to call initQuestDB() first")
 	}

@@ -3,8 +3,9 @@ package writers
 import (
 	"context"
 	"github.com/phoobynet/trade-ripper/configuration"
-	"github.com/phoobynet/trade-ripper/trades"
-	"github.com/phoobynet/trade-ripper/trades/schema"
+	"github.com/phoobynet/trade-ripper/tradesdb"
+	"github.com/phoobynet/trade-ripper/tradesdb/influx"
+	"github.com/phoobynet/trade-ripper/tradesdb/schema"
 	qdb "github.com/questdb/go-questdb-client"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
@@ -23,7 +24,7 @@ func NewCryptoWriter(options configuration.Options) *CryptoWriter {
 	}
 
 	ctx := context.TODO()
-	sender := trades.CreateSender(ctx, options)
+	sender := influx.CreateSender(ctx, options)
 
 	return &CryptoWriter{
 		sender: sender,
@@ -32,7 +33,7 @@ func NewCryptoWriter(options configuration.Options) *CryptoWriter {
 }
 
 // Write - writes and flushes the trades to QuestDB - recommended to be called when the trades reaches between 10 and 1000 objects
-func (w *CryptoWriter) Write(trades []trades.Trade) {
+func (w *CryptoWriter) Write(trades []tradesdb.Trade) {
 	chunks := lo.Chunk(trades, 1_000)
 
 	var table *qdb.LineSender

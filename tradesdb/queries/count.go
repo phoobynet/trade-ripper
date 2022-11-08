@@ -4,7 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"github.com/phoobynet/trade-ripper/configuration"
-	"github.com/phoobynet/trade-ripper/database"
+	"github.com/phoobynet/trade-ripper/tradesdb/postgres"
 )
 
 //go:embed count_crypto.sql
@@ -14,7 +14,7 @@ var cryptoSQL string
 var usEquitySQL string
 
 func Count(options configuration.Options) (int64, error) {
-	db, questDBErr := database.GetPostgresConnection()
+	db, questDBErr := postgres.Get()
 
 	if questDBErr != nil {
 		return 0, questDBErr
