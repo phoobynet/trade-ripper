@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"time"
 )
@@ -95,8 +96,8 @@ func run(options configuration.Options) {
 
 	indexConstituents := make([]scrapers.IndexConstituent, 0)
 
-	if options.Indexes != nil && len(options.Indexes) > 0 {
-		for _, index := range options.Indexes {
+	if options.Indexes != "" {
+		for _, index := range strings.Split(options.Indexes, ",") {
 			if index == "sp500" {
 				sp500, sp500Err := scrapers.GetSP500()
 				if sp500Err != nil {
@@ -123,7 +124,7 @@ func run(options configuration.Options) {
 			}
 
 			symbols = lo.Uniq[string](indexConstituentsSymbols)
-
+			logrus.Info("Index constituents: ", strings.Join(symbols, ", "))
 		} else {
 			logrus.Fatalln("No valid market indexes found")
 		}
