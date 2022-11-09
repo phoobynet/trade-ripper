@@ -25,7 +25,7 @@ type WebServer struct {
 
 func NewWebServer(options configuration.Options, dist embed.FS, latestTradeRepository *tradeskv.LatestTradeRepository) *WebServer {
 	sseServer := sse.New()
-	sseServer.CreateStream("messages")
+	sseServer.CreateStream("events")
 
 	mux := http.NewServeMux()
 
