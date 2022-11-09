@@ -44,7 +44,7 @@ func (r *TradeReader) Stop() error {
 func (r *TradeReader) Start() error {
 	defer func() {
 		if rec := recover(); rec != nil {
-			r.config.webServer.Publish(map[string]any{
+			r.config.webServer.PublishEvent(map[string]any{
 				"type":    "error",
 				"message": fmt.Sprintf("panic and recovered: %v", rec),
 			})

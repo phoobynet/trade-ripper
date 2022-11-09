@@ -36,7 +36,7 @@ export const useAppStore = create<AppStore>((set) => ({
   },
 }))
 
-const eventSource = new EventSource(`${sourceUrl}/events?stream=messages`)
+const eventSource = new EventSource(`${sourceUrl}/events?stream=events`)
 
 interface CountMessageData {
   n: number

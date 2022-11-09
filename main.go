@@ -108,14 +108,14 @@ func main() {
 					tradeWriter.Write(tradesBuffer)
 					tradesBuffer = make([]tradesdb.Trade, 0)
 					count += l
-					webServer.Publish(map[string]any{
+					webServer.PublishEvent(map[string]any{
 						"message": "count",
 						"data": map[string]any{
 							"n": count,
 						},
 					})
 				} else {
-					webServer.Publish(map[string]any{
+					webServer.PublishEvent(map[string]any{
 						"message": "ping",
 					})
 				}

@@ -62,7 +62,7 @@ func NewWebServer(options configuration.Options, dist embed.FS, latestTradeRepos
 	return webServer
 }
 
-func (ws *WebServer) Publish(message any) {
+func (ws *WebServer) PublishEvent(message any) {
 	if ws.sseServer == nil {
 		logrus.Error("web server is nil")
 		return
@@ -78,7 +78,7 @@ func (ws *WebServer) Publish(message any) {
 		return
 	}
 
-	ws.sseServer.Publish("messages", &sse.Event{
+	ws.sseServer.Publish("events", &sse.Event{
 		Data: data,
 	})
 }
