@@ -6,7 +6,6 @@ import (
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/loggers"
-	"github.com/phoobynet/trade-ripper/scrapers"
 	"github.com/phoobynet/trade-ripper/server"
 	"github.com/phoobynet/trade-ripper/tradesdb"
 	"github.com/phoobynet/trade-ripper/tradesdb/adapters"
@@ -14,11 +13,9 @@ import (
 	"github.com/phoobynet/trade-ripper/tradesdb/queries"
 	"github.com/phoobynet/trade-ripper/tradesdb/writers"
 	"github.com/phoobynet/trade-ripper/tradeskv"
-	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"time"
 )
@@ -28,7 +25,7 @@ var (
 	dist                  embed.FS
 	quitChannel           = make(chan os.Signal, 1)
 	options               configuration.Options
-	sipReader             *alpaca.TradeReader
+	tradeReader           *alpaca.TradeReader
 	rawMessageChannel     = make(chan []byte, 1_000_000)
 	errorsChannel         = make(chan error, 1)
 	errorsReceived        = 0
@@ -76,72 +73,17 @@ func main() {
 
 	loggers.InitLogger(webServer)
 
-	go run(options)
-
-	webServer.Listen()
-}
-
-func run(options configuration.Options) {
 	logrus.Info("Starting up Trade Reader...")
 
 	// invoke when we have accumulated enough trades to write to the database
-	var tradeWriter writers.TradeWriter
-	if options.Class == "crypto" {
-		tradeWriter = writers.NewCryptoWriter(options)
-	} else {
-		tradeWriter = writers.NewUSEquityWriter(options)
-	}
+	tradeWriter := writers.CreateTradeWriter(options)
 
-	symbols := make([]string, 0)
+	tickers := options.ExtractTickers()
 
-	indexConstituents := make([]scrapers.IndexConstituent, 0)
-
-	if options.Indexes != "" {
-		for _, index := range strings.Split(options.Indexes, ",") {
-			if index == "sp500" {
-				sp500, sp500Err := scrapers.GetSP500()
-				if sp500Err != nil {
-					logrus.Fatalln(sp500Err)
-				}
-
-				indexConstituents = append(indexConstituents, sp500...)
-			} else if index == "nasdaq100" {
-				nasdaq100, nasdaq100Err := scrapers.GetNASDAQ100()
-				if nasdaq100Err != nil {
-					logrus.Fatalln(nasdaq100Err)
-				}
-
-				indexConstituents = append(indexConstituents, nasdaq100...)
-			} else if index == "djia" {
-				djia, djiaErr := scrapers.GetDJIA()
-				if djiaErr != nil {
-					logrus.Fatalln(djiaErr)
-				}
-				indexConstituents = append(indexConstituents, djia...)
-			}
-		}
-
-		if len(indexConstituents) > 0 {
-			options.Class = "us_equity"
-			indexConstituentsSymbols := make([]string, 0)
-
-			for _, ic := range indexConstituents {
-				indexConstituentsSymbols = append(indexConstituentsSymbols, ic.Ticker)
-			}
-
-			symbols = lo.Uniq[string](indexConstituentsSymbols)
-			logrus.Info("Index constituents: ", strings.Join(symbols, ", "))
-		} else {
-			logrus.Fatalln("No valid market indexes found")
-		}
-	} else {
-		symbols = append(symbols, "*")
-	}
-
-	sipReader = alpaca.NewTradeReader(&alpaca.TradeReaderConfig{
+	tradeReader = alpaca.NewTradeReader(&alpaca.TradeReaderConfig{
 		Key:               os.Getenv("APCA_API_KEY_ID"),
 		Secret:            os.Getenv("APCA_API_SECRET_KEY"),
-		Symbols:           symbols,
+		Symbols:           tickers,
 		RawMessageChannel: rawMessageChannel,
 		ErrorsChannel:     errorsChannel,
 		Options:           options,
@@ -182,39 +124,42 @@ func run(options configuration.Options) {
 	}()
 
 	go func() {
-		tradeReaderStartErr := sipReader.Start()
+		logrus.Info("Trade Reader has started and is waiting for trades...")
+		tradeReaderStartErr := tradeReader.Start()
 
 		if tradeReaderStartErr != nil {
 			logrus.Fatalln(tradeReaderStartErr)
 		}
 	}()
 
-	logrus.Info("Trade Reader has started and is waiting for trades...")
+	go func() {
+		for {
+			select {
+			case <-quitChannel:
+				logrus.Info("Shutting down...")
+				_ = tradeReader.Stop()
+				os.Exit(1)
+			case rawMessage := <-rawMessageChannel:
+				tradeMessages, adapterErr := adapters.AdaptRawMessageToTrades(rawMessage)
 
-	for {
-		select {
-		case <-quitChannel:
-			logrus.Info("Shutting down...")
-			_ = sipReader.Stop()
-			os.Exit(1)
-		case rawMessage := <-rawMessageChannel:
-			tradeMessages, adapterErr := adapters.AdaptRawMessageToTrades(rawMessage)
-
-			if adapterErr != nil {
-				logrus.Panicf("Error converting raw message to trade: %s", adapterErr)
+				if adapterErr != nil {
+					logrus.Panicf("Error converting raw message to trade: %s", adapterErr)
+				}
+				tradesChannel <- tradeMessages
+			case tradeMessages := <-tradesChannel:
+				tradesWriterLock.Lock()
+				tradesBuffer = append(tradesBuffer, tradeMessages...)
+				latestTradeUpdateErr := latestTradeRepository.Update(tradeMessages)
+				if latestTradeUpdateErr != nil {
+					logrus.Error(latestTradeUpdateErr)
+				}
+				tradesWriterLock.Unlock()
+			case err := <-errorsChannel:
+				errorsReceived++
+				logrus.Error(err)
 			}
-			tradesChannel <- tradeMessages
-		case tradeMessages := <-tradesChannel:
-			tradesWriterLock.Lock()
-			tradesBuffer = append(tradesBuffer, tradeMessages...)
-			latestTradeUpdateErr := latestTradeRepository.Update(tradeMessages)
-			if latestTradeUpdateErr != nil {
-				logrus.Error(latestTradeUpdateErr)
-			}
-			tradesWriterLock.Unlock()
-		case err := <-errorsChannel:
-			errorsReceived++
-			logrus.Error(err)
 		}
-	}
+	}()
+
+	webServer.Listen()
 }

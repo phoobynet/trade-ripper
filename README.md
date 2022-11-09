@@ -25,10 +25,7 @@ I tried a bunch of databases, SQLite, MongoDB (time series), Postgres, TimeScale
 perform as well as Quest with so little effort while being able to bulk insert and perform online queries at the same
 time.
 
-I run my QuestDB on Windows 11 Pro (yes, Windows) AMD 5700g with 64GB of RAM and a PCI gen 4 NVME drive, which is
-limited to PCI gen 3 speed because of the processor, but still plenty of headroom.
-
-I've also had it running on linux in docker without any issues.
+I run my QuestDB on Fedora 36 inside a Docker container without any issues (AMD 5700g, 64GB RAM, PCI-E Gen 3 NVME). 
 
 If you do try running QuestDB in Docker on an Apple Silicon machine in Docker, at the time of writing, there is no
 native ARM image. I did try it (my personal dev machine is an Apple Mac Studio M1 Max), but it slammed it pretty hard
@@ -128,13 +125,34 @@ go build
 
 ```bash
 # Run it
-# for us equity quotes
-./trade-ripper --host my.questdb.host --class us_equity --influx 9009 --postgres 8812 --webserver 3000 
+# for ALL us equity quotes
+./trade-ripper --host my.questdb.host --class us_equity --influx 9009 --postgres 8812 --webserver 3000
 
-# for crypto quotes
+# for us equity quotes in the S & P 500 (assuming you use the default ports)
+./trade-ripper --host my.questdb.host --class us_equity --indexes sp500
+
+# for us equity quotes in the NASDAQ 100 (assuming you use the default ports)
+./trade-ripper --host my.questdb.host --class us_equity --indexes nasdaq100
+
+# for us equity quotes in the DJIA (assuming you use the default ports)
+./trade-ripper --host my.questdb.host --class us_equity --indexes djia
+
+# for us equity quotes in the multiple indexes (assuming you use the default ports)
+./trade-ripper --host my.questdb.host --class us_equity --indexes sp500,nasdaq100,djia
+
+# for us equity quotes for tickers stored in a file containing each ticker on it's own line
+./trade-ripper --host my.questdb.host --class us_equity --tickersfile my-tickers.txt
+
+# for us equity quotes for tickers specified in the command line
+./trade-ripper --host my.questdb.host --class us_equity --tickers TASK,NEO,LOGC,GRWG
+
+# for us equity quotes for tickers stored in a file containing each ticker on it's own line and multiple indexes plus some additional items
+./trade-ripper --host my.questdb.host --class us_equity --tickersfile my-tickers.txt --indexes sp500,nasdaq100,djia --tickers TASK,NEO,LOGC,GRWG
+
+# for ALL crypto quotes
 ./trade-ripper --host my.questdb.host --class crypto --influx 9009 --postgres 8812 --webserver 3000
 
-# using default values (influx 9009, postgres 8812, webserver 3000)
+# using default values (influx 9009, postgres 8812, webserver 3000) and subscribing to all tickers (NOT RECOMMENDED - depends on the performance of the machine)
 ./trade-ripper --host my.questdb.host --class us_equity
 ```
 
