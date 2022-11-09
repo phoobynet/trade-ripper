@@ -44,11 +44,6 @@ func (r *TradeReader) Stop() error {
 func (r *TradeReader) Start() error {
 	defer func() {
 		if rec := recover(); rec != nil {
-			r.config.webServer.PublishEvent(map[string]any{
-				"type":    "error",
-				"message": fmt.Sprintf("panic and recovered: %v", rec),
-			})
-
 			logrus.Error("recovering from reader panic: ", rec)
 			time.Sleep(2 * time.Second)
 			restartErr := r.Start()

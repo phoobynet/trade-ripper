@@ -99,6 +99,12 @@ func main() {
 
 		for range ticker.C {
 			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						logrus.Errorf("Recovered in f %v", r)
+					}
+					time.Sleep(1 * time.Second)
+				}()
 				tradesWriterLock.Lock()
 				defer tradesWriterLock.Unlock()
 
