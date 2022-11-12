@@ -14,21 +14,27 @@ type Server struct {
 	options               configuration.Options
 	latestTradeRepository *tradeskv.LatestTradeRepository
 	sseServer             *sse.Server
-	router                *httprouter.Router
+	mux                   *http.ServeMux
 }
 
 func NewServer(options configuration.Options, dist embed.FS, latestTradeRepository *tradeskv.LatestTradeRepository) *Server {
 	sseServer := sse.New()
 	sseServer.CreateStream("events")
 
-	router := httprouter.New()
 	webServer := &Server{
 		options,
 		latestTradeRepository,
 		sseServer,
-		router,
+		http.NewServeMux(),
 	}
 
+	fsys, distFSErr := fs.Sub(dist, "dist")
+
+	if distFSErr != nil {
+		panic(distFSErr)
+	}
+
+	router := httprouter.New()
 	router.GlobalOPTIONS = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Access-Control-Request-Method") != "" {
 			header := w.Header()
@@ -38,20 +44,14 @@ func NewServer(options configuration.Options, dist embed.FS, latestTradeReposito
 
 		w.WriteHeader(http.StatusNoContent)
 	})
+	router.GET("/api/events", webServer.eventsHandler)
+	router.GET("/api/trades/latest", webServer.tradesLatestHandler)
+	router.GET("/api/trades/symbols", webServer.tradeSymbolsHandler)
+	router.GET("/api/bars/:ticker/:interval/:date", webServer.barsHandler)
+	router.GET("/api/class", webServer.classHandler)
 
-	router.GET("/events", webServer.eventsHandler)
-	router.GET("/trades/latest", webServer.tradesLatestHandler)
-	router.GET("/trades/symbols", webServer.tradeSymbolsHandler)
-	router.GET("/classHandler", webServer.classHandler)
-	router.GET("/bars/:ticker/:date", webServer.barsHandler)
-
-	fsys, distFSErr := fs.Sub(dist, "dist")
-
-	if distFSErr != nil {
-		panic(distFSErr)
-	}
-
-	router.ServeFiles("/", http.FS(fsys))
+	webServer.mux.Handle("/", http.FileServer(http.FS(fsys)))
+	webServer.mux.Handle("/api/", router)
 
 	return webServer
 }

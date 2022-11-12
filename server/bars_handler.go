@@ -18,9 +18,25 @@ type Bar struct {
 	Timestamp time.Time `json:"t"`
 }
 
+const getBarsSQL = `
+select 
+	first(price) open, 
+	max(price) high, 
+	min(price) low, 
+	last(price) close, 
+	sum(size) volume, 
+	last(timestamp) timestamp
+from us_equity
+where 
+	ticker = ? and timestamp in ':date'
+sample by :interval FILL(prev)
+align to CALENDAR with offset '00:00'
+`
+
 func (s *Server) barsHandler(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	ticker := p.ByName("ticker")
 	date := p.ByName("date")
+	interval := p.ByName("interval")
 	db, dbErr := postgres.Get()
 
 	if dbErr != nil {
@@ -31,17 +47,8 @@ func (s *Server) barsHandler(w http.ResponseWriter, r *http.Request, p httproute
 	var bars []Bar
 
 	// HACK: Had to find/replace "timestamp in " clause
-	sql := strings.Replace(`
-		select 
-			first(price) open, 
-			max(price) high, 
-			min(price) low, 
-			latest(price) close, 
-			sum(size) volume, 
-			latest(timestamp) timestamp
-		where 
-			ticker = ? and timestamp in ':today'
-	`, ":today", date, 1)
+	sql := strings.ReplaceAll(getBarsSQL, ":date", date)
+	sql = strings.ReplaceAll(sql, ":interval", interval)
 
 	result := db.Raw(sql, ticker)
 	scanErr := result.Scan(&bars).Error

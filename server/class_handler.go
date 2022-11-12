@@ -7,7 +7,7 @@ import (
 
 func (s *Server) classHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	err := writeJSON(w, http.StatusOK, map[string]any{
-		"classHandler": s.options.Class,
+		"class": s.options.Class,
 	})
 
 	if err != nil {
