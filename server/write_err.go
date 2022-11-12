@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func WriteErr(w http.ResponseWriter, statusCode int, err error) error {
+func writeErr(w http.ResponseWriter, statusCode int, err error) error {
 	logrus.Error(err)
 	return writeJSON(w, statusCode, map[string]string{
 		"error": err.Error(),

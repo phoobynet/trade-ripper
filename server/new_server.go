@@ -5,7 +5,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/tradeskv"
-	"github.com/r3labs/sse/v2"
 	"io/fs"
 	"net/http"
 )
@@ -13,18 +12,13 @@ import (
 type Server struct {
 	options               configuration.Options
 	latestTradeRepository *tradeskv.LatestTradeRepository
-	sseServer             *sse.Server
 	mux                   *http.ServeMux
 }
 
 func NewServer(options configuration.Options, dist embed.FS, latestTradeRepository *tradeskv.LatestTradeRepository) *Server {
-	sseServer := sse.New()
-	sseServer.CreateStream("events")
-
 	webServer := &Server{
 		options,
 		latestTradeRepository,
-		sseServer,
 		http.NewServeMux(),
 	}
 
@@ -44,11 +38,9 @@ func NewServer(options configuration.Options, dist embed.FS, latestTradeReposito
 
 		w.WriteHeader(http.StatusNoContent)
 	})
-	router.GET("/api/events", webServer.eventsHandler)
-	router.GET("/api/trades/latest", webServer.tradesLatestHandler)
-	router.GET("/api/trades/symbols", webServer.tradeSymbolsHandler)
-	router.GET("/api/bars/:ticker/:interval/:date", webServer.barsHandler)
-	router.GET("/api/class", webServer.classHandler)
+	router.GET("/api/events", getEventsStream)
+	router.GET("/api/bars/:ticker/:interval/:date", getBars)
+	router.GET("/api/class", createGetClassHandler(options.Class))
 
 	webServer.mux.Handle("/", http.FileServer(http.FS(fsys)))
 	webServer.mux.Handle("/api/", router)

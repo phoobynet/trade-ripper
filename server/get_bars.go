@@ -33,14 +33,14 @@ sample by :interval FILL(prev)
 align to CALENDAR with offset '00:00'
 `
 
-func (s *Server) barsHandler(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+func getBars(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	ticker := p.ByName("ticker")
 	date := p.ByName("date")
 	interval := p.ByName("interval")
 	db, dbErr := postgres.Get()
 
 	if dbErr != nil {
-		_ = WriteErr(w, http.StatusInternalServerError, dbErr)
+		_ = writeErr(w, http.StatusInternalServerError, dbErr)
 		return
 	}
 
@@ -54,12 +54,12 @@ func (s *Server) barsHandler(w http.ResponseWriter, r *http.Request, p httproute
 	scanErr := result.Scan(&bars).Error
 
 	if scanErr != nil {
-		_ = WriteErr(w, http.StatusInternalServerError, scanErr)
+		_ = writeErr(w, http.StatusInternalServerError, scanErr)
 		return
 	}
 
 	writeJSONErr := writeJSON(w, http.StatusOK, bars)
 	if writeJSONErr != nil {
-		_ = WriteErr(w, http.StatusInternalServerError, writeJSONErr)
+		_ = writeErr(w, http.StatusInternalServerError, writeJSONErr)
 	}
 }

@@ -28,7 +28,8 @@ func (hook *MessageStreamHook) Fire(entry *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	hook.webServer.PublishEvent(map[string]interface{}{
+
+	server.PublishEvent(map[string]interface{}{
 		"type":    entry.Level.String(),
 		"message": entry.Message,
 		"time":    entry.Time,
