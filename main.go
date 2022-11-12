@@ -33,7 +33,7 @@ var (
 	tradesBuffer          = make([]tradesdb.Trade, 0)
 	tradesWriterLock      = sync.Mutex{}
 	latestTradeRepository *tradeskv.LatestTradeRepository
-	webServer             *server.WebServer
+	webServer             *server.Server
 )
 
 func main() {
@@ -69,7 +69,7 @@ func main() {
 		repository.Close()
 	}(latestTradeRepository)
 
-	webServer = server.NewWebServer(options, dist, latestTradeRepository)
+	webServer = server.NewServer(options, dist, latestTradeRepository)
 
 	loggers.InitLogger(webServer)
 

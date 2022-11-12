@@ -15,7 +15,7 @@ var (
 	logFile      *os.File
 )
 
-func InitLogger(webServer *server.WebServer) {
+func InitLogger(webServer *server.Server) {
 	now := time.Now().Format("20060102_150405")
 
 	lf, logFileErr := os.Create(fmt.Sprintf("trade_ripper_%s.log", now))

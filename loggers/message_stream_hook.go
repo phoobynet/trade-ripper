@@ -12,10 +12,10 @@ import (
 type MessageStreamHook struct {
 	Writer    io.Writer
 	LogLevels []logrus.Level
-	webServer *server.WebServer
+	webServer *server.Server
 }
 
-func NewMessageStreamHook(webServer *server.WebServer) *MessageStreamHook {
+func NewMessageStreamHook(webServer *server.Server) *MessageStreamHook {
 	return &MessageStreamHook{
 		Writer:    io.Discard,
 		LogLevels: logrus.AllLevels,

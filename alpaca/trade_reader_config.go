@@ -12,5 +12,5 @@ type TradeReaderConfig struct {
 	ErrorsChannel     chan error
 	RawMessageChannel chan []byte
 	Options           configuration.Options
-	webServer         *server.WebServer
+	webServer         *server.Server
 }
