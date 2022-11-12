@@ -41,6 +41,7 @@ func NewServer(options configuration.Options, dist embed.FS, latestTradeReposito
 	router.GET("/api/events", getEventsStream)
 	router.GET("/api/class", createGetClassHandler(options.Class))
 
+	router.GET("/api/assets", getAssets)
 	router.GET("/api/bars/:ticker/:date/:interval", getBars)
 	router.GET("/api/volume-leaders/:date/:limit", getVolumeLeaders)
 

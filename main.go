@@ -62,6 +62,11 @@ func main() {
 		panic(questDBErr)
 	}
 
+	initAssetsErr := alpaca.InitAssets()
+	if initAssetsErr != nil {
+		panic(initAssetsErr)
+	}
+
 	latestTradeRepository = tradeskv.NewLatestRepository(options)
 
 	defer func(repository *tradeskv.LatestTradeRepository) {

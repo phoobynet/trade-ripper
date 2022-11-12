@@ -299,3 +299,4 @@ dist
 # vendor/
 
 latest_trades
+local.db
