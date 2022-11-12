@@ -39,8 +39,10 @@ func NewServer(options configuration.Options, dist embed.FS, latestTradeReposito
 		w.WriteHeader(http.StatusNoContent)
 	})
 	router.GET("/api/events", getEventsStream)
-	router.GET("/api/bars/:ticker/:interval/:date", getBars)
 	router.GET("/api/class", createGetClassHandler(options.Class))
+
+	router.GET("/api/bars/:ticker/:date/:interval", getBars)
+	router.GET("/api/volume-leaders/:date/:limit", getVolumeLeaders)
 
 	webServer.mux.Handle("/", http.FileServer(http.FS(fsys)))
 	webServer.mux.Handle("/api/", router)
