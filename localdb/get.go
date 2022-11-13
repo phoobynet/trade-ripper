@@ -4,11 +4,18 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"os"
+	"path/filepath"
 )
 
 func Get() *gorm.DB {
 	if db == nil {
-		d, dErr := gorm.Open(sqlite.Open("local.db"), &gorm.Config{
+		var dbPath string
+		wd, _ := os.Getwd()
+
+		dbPath = filepath.Join(wd, "trade-ripper.db")
+
+		d, dErr := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
 			Logger: logger.Default.LogMode(logger.Silent),
 		})
 

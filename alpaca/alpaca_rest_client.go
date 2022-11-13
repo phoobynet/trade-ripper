@@ -1,8 +1,9 @@
 package alpaca
 
 import (
-	"fmt"
 	"github.com/go-resty/resty/v2"
+	"github.com/sirupsen/logrus"
+	"net/http"
 	"os"
 )
 
@@ -11,7 +12,7 @@ var client *resty.Client
 func getClient() *resty.Client {
 	if client == nil {
 		client = resty.New()
-		client.SetDebug(true)
+		client.SetDebug(false)
 		client.SetBaseURL("https://paper-api.alpaca.markets/v2")
 		client.SetHeaders(map[string]string{
 			"APCA-API-KEY-ID":     os.Getenv("APCA_API_KEY_ID"),
@@ -23,10 +24,12 @@ func getClient() *resty.Client {
 }
 
 func GetData[T any](url string, queryParams map[string]string) (T, error) {
-	fmt.Println("Getting data from: ", url)
-	fmt.Printf("Query params: %v\n", queryParams)
 	var data T
-	_, err := getClient().R().SetQueryParams(queryParams).SetResult(&data).Get(url)
+	response, err := getClient().R().SetQueryParams(queryParams).SetResult(&data).Get(url)
+
+	if response.StatusCode() != http.StatusOK {
+		logrus.Fatalf("Error getting data from %s: %s", url, response.Status())
+	}
 
 	return data, err
 }

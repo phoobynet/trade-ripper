@@ -300,3 +300,5 @@ dist
 
 latest_trades
 local.db
+trade-ripper.db
+trade-ripper

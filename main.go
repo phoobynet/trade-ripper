@@ -4,6 +4,8 @@ import (
 	"embed"
 	"github.com/alexflint/go-arg"
 	"github.com/phoobynet/trade-ripper/alpaca"
+	"github.com/phoobynet/trade-ripper/alpaca/assets"
+	"github.com/phoobynet/trade-ripper/alpaca/calendars"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/loggers"
 	"github.com/phoobynet/trade-ripper/server"
@@ -57,15 +59,9 @@ func main() {
 
 	signal.Notify(quitChannel, os.Interrupt)
 
-	questDBErr := postgres.Start(options)
-	if questDBErr != nil {
-		panic(questDBErr)
-	}
-
-	initAssetsErr := alpaca.InitAssets()
-	if initAssetsErr != nil {
-		panic(initAssetsErr)
-	}
+	postgres.Initialize(options)
+	assets.Initialize()
+	calendars.Initialize()
 
 	latestTradeRepository = tradeskv.NewLatestRepository(options)
 

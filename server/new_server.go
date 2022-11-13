@@ -44,6 +44,8 @@ func NewServer(options configuration.Options, dist embed.FS, latestTradeReposito
 	router.GET("/api/assets", getAssets)
 	router.GET("/api/bars/:ticker/:date/:interval", getBars)
 	router.GET("/api/volume-leaders/:date/:limit", getVolumeLeaders)
+	router.GET("/api/calendar/previous", getCalendarPrevious)
+	router.GET("/api/calendar/current", getCalendarCurrent)
 
 	webServer.mux.Handle("/", http.FileServer(http.FS(fsys)))
 	webServer.mux.Handle("/api/", router)
