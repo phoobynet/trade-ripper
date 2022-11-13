@@ -10,8 +10,25 @@ const sourceUrl = import.meta.env.DEV
 export interface Message {
   type: string
   data: unknown
-  time: string
+  time?: string
   message: string
+}
+
+export interface Calendar {
+  date: string
+  sessionOpen: string
+  sessionClose: string
+  open: string
+  close: string
+}
+
+export interface MarketStatus {
+  status: string
+  localTime: string
+  marketTime: string
+  current?: Calendar
+  next: Calendar
+  previous: Calendar
 }
 
 export interface AppStore {
@@ -20,6 +37,7 @@ export interface AppStore {
   count: number
   rateBuffer: number[]
   tradesPerSecond: number
+  marketStatus?: MarketStatus
   instrumentClass?: InstrumentClass
   fetchClass: () => Promise<void>
 }
@@ -31,6 +49,7 @@ export const useAppStore = create<AppStore>((set) => ({
   rateBuffer: [],
   tradesPerSecond: 0,
   instrumentClass: undefined,
+  marketStatus: undefined,
   fetchClass: async () => {
     getClass().then((c) => set({ instrumentClass: c }))
   },
@@ -45,11 +64,11 @@ interface CountMessageData {
 eventSource.onmessage = (event) => {
   const message = JSON.parse(event.data) as Message
 
-  if (message.message === 'count') {
+  if (message.type === 'trade_count') {
     useAppStore.setState((state) => {
       let count = state.count
 
-      if (message.message === 'count') {
+      if (message.type === 'trade_count') {
         const countMessageData = message.data as CountMessageData
         count = countMessageData.n
       }
@@ -68,6 +87,10 @@ eventSource.onmessage = (event) => {
             : 0,
       }
     })
+  } else if (message.type === 'market_status') {
+    useAppStore.setState(() => ({
+      marketStatus: message.data as MarketStatus,
+    }))
   }
 
   useAppStore.setState((state) => ({

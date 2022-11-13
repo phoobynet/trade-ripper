@@ -5,6 +5,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/tradeskv"
+	"github.com/rs/cors"
 	"io/fs"
 	"net/http"
 )
@@ -29,15 +30,14 @@ func NewServer(options configuration.Options, dist embed.FS, latestTradeReposito
 	}
 
 	router := httprouter.New()
-	router.GlobalOPTIONS = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Access-Control-Request-Method") != "" {
-			header := w.Header()
-			header.Set("Access-Control-Allow-Methods", header.Get("Allow"))
-			header.Set("Access-Control-Allow-Origin", "*")
-		}
 
-		w.WriteHeader(http.StatusNoContent)
+	myCors := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: false,
 	})
+
 	router.GET("/api/events", getEventsStream)
 	router.GET("/api/class", createGetClassHandler(options.Class))
 
@@ -47,9 +47,10 @@ func NewServer(options configuration.Options, dist embed.FS, latestTradeReposito
 	router.GET("/api/calendar/previous", getCalendarPrevious)
 	router.GET("/api/calendar/current", getCalendarCurrent)
 	router.GET("/api/calendar/next", getCalendarNext)
+	router.GET("/api/market-status", getMarketStatus)
 
 	webServer.mux.Handle("/", http.FileServer(http.FS(fsys)))
-	webServer.mux.Handle("/api/", router)
+	webServer.mux.Handle("/api/", myCors.Handler(router))
 
 	return webServer
 }

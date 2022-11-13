@@ -8,6 +8,7 @@ import (
 	"github.com/phoobynet/trade-ripper/alpaca/calendars"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/loggers"
+	"github.com/phoobynet/trade-ripper/market"
 	"github.com/phoobynet/trade-ripper/server"
 	"github.com/phoobynet/trade-ripper/tradesdb"
 	"github.com/phoobynet/trade-ripper/tradesdb/adapters"
@@ -62,6 +63,7 @@ func main() {
 	postgres.Initialize(options)
 	assets.Initialize()
 	calendars.Initialize()
+	server.InitSSE()
 
 	latestTradeRepository = tradeskv.NewLatestRepository(options)
 
@@ -90,14 +92,27 @@ func main() {
 	})
 
 	go func() {
+		marketStatusTicker := time.NewTicker(1 * time.Second)
+
+		for range marketStatusTicker.C {
+			status := market.GetStatus()
+			server.PublishEvent(map[string]any{
+				"message": "update",
+				"type":    "market_status",
+				"data":    status,
+			})
+		}
+	}()
+
+	go func() {
 		count, countErr := queries.Count(options)
 
 		if countErr != nil {
 			logrus.Panicf("Error counting trades: %s", countErr)
 		}
-		ticker := time.NewTicker(1 * time.Second)
+		countTicker := time.NewTicker(1 * time.Second)
 
-		for range ticker.C {
+		for range countTicker.C {
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
@@ -115,14 +130,16 @@ func main() {
 					tradesBuffer = make([]tradesdb.Trade, 0)
 					count += l
 					server.PublishEvent(map[string]any{
-						"message": "count",
+						"type":    "trade_count",
+						"message": "count update",
 						"data": map[string]any{
 							"n": count,
 						},
 					})
 				} else {
 					server.PublishEvent(map[string]any{
-						"message": "ping",
+						"type":    "ping",
+						"message": "hello",
 					})
 				}
 			}()

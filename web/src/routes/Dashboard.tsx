@@ -44,7 +44,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <main className={'flex flex-col space-y-4 mx-2 md:mx-0'}>
+      <main className={'mx-2 flex flex-col space-y-4 md:mx-0'}>
         {secondsSinceLastCheckIn > 5 ? (
           <motion.div
             initial={{ opacity: 0 }}
@@ -60,7 +60,7 @@ export default function Dashboard() {
 
                 <AiFillAlert
                   size={64}
-                  className={'md:hidden display'}
+                  className={'display md:hidden'}
                 />
                 <div className={'text-sm md:text-lg'}>
                   <p>
@@ -79,7 +79,7 @@ export default function Dashboard() {
           <Stat
             title={'Class'}
             value={
-              <div className={'flex space-x-2 items-center justify-center'}>
+              <div className={'flex items-center justify-center space-x-2'}>
                 <div>{displayInstrumentClass} </div>
                 {instrumentClass === 'crypto' ? (
                   <BsCurrencyBitcoin />

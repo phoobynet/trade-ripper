@@ -13,13 +13,13 @@ func Current() *Calendar {
 
 	db := localdb.Get()
 
-	var calendar *Calendar
+	var calendar Calendar
 
-	scanErr := db.Raw(selectCurrentCalendarSQL, date).Scan(calendar).Error
+	scanErr := db.Raw(selectCurrentCalendarSQL, date).Scan(&calendar).Error
 
 	if scanErr != nil {
 		logrus.Fatal(scanErr)
 	}
 
-	return calendar
+	return &calendar
 }

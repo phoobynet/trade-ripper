@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"github.com/r3labs/sse/v2"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"sync"
 )
@@ -13,7 +12,7 @@ import (
 var sseServer *sse.Server
 var sseMutex sync.Mutex
 
-func initSSE() {
+func InitSSE() {
 	sseMutex.Lock()
 	defer sseMutex.Unlock()
 
@@ -21,9 +20,6 @@ func initSSE() {
 		sseServer = sse.New()
 		sseServer.CreateStream("events")
 	}
-}
-func init() {
-	initSSE()
 }
 
 func getEventsStream(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -39,14 +35,13 @@ func getEventsStream(w http.ResponseWriter, r *http.Request, _ httprouter.Params
 }
 
 func PublishEvent(message any) {
+	// DON'T DO THIS: logrus.* functions will cause infinite recursion
 	if sseServer == nil {
-		logrus.Warn("SSE Server is not initialized")
-		return
+		panic("SSE Server is not initialized")
 	}
 
 	if message == nil {
-		logrus.Warn("Cannot send nil message")
-		return
+		panic("Cannot send nil message")
 	}
 
 	data, marshalErr := json.Marshal(message)

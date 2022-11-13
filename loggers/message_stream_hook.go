@@ -24,6 +24,7 @@ func NewMessageStreamHook(webServer *server.Server) *MessageStreamHook {
 }
 
 func (hook *MessageStreamHook) Fire(entry *logrus.Entry) error {
+	// DON'T DO THIS: logrus.* functions will cause infinite recursion
 	_, err := entry.Bytes()
 	if err != nil {
 		return err

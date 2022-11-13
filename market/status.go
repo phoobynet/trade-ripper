@@ -1,12 +1,15 @@
 package market
 
-import "github.com/phoobynet/trade-ripper/alpaca/calendars"
+import (
+	"github.com/phoobynet/trade-ripper/alpaca/calendars"
+	"time"
+)
 
 type Status struct {
-	LocalTime  string             `json:"localTime"`
-	MarketTime string             `json:"marketTime"`
-	Status     string             `json:"status"`
-	Current    calendars.Calendar `json:"current"`
-	Previous   calendars.Calendar `json:"previous"`
-	Next       calendars.Calendar `json:"next"`
+	LocalTime  time.Time           `json:"localTime"`
+	MarketTime time.Time           `json:"marketTime"`
+	Status     string              `json:"status"`
+	Current    *calendars.Calendar `json:"current"`
+	Previous   *calendars.Calendar `json:"previous"`
+	Next       *calendars.Calendar `json:"next"`
 }

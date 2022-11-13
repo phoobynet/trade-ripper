@@ -10,7 +10,7 @@ const selectNextCalendarSQL = `
 SELECT * FROM calendars where date > ? ORDER BY date ASC LIMIT 1
 `
 
-func Next() Calendar {
+func Next() *Calendar {
 	date := time.Now().Format("2006-01-02")
 
 	db := localdb.Get()
@@ -23,5 +23,5 @@ func Next() Calendar {
 		logrus.Fatal(scanErr)
 	}
 
-	return calendar
+	return &calendar
 }
