@@ -6,6 +6,7 @@ import (
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/alpaca/assets"
 	"github.com/phoobynet/trade-ripper/alpaca/calendars"
+	"github.com/phoobynet/trade-ripper/alpaca/snapshots"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/loggers"
 	"github.com/phoobynet/trade-ripper/market"
@@ -63,6 +64,7 @@ func main() {
 	postgres.Initialize(options)
 	assets.Initialize()
 	calendars.Initialize()
+	snapshots.CachePreviousClose()
 	server.InitSSE()
 
 	latestTradeRepository = tradeskv.NewLatestRepository(options)

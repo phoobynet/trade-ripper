@@ -5,7 +5,10 @@ go 1.19
 require (
 	github.com/alexflint/go-arg v1.4.3
 	github.com/dgraph-io/badger/v3 v3.2103.4
+	github.com/go-resty/resty/v2 v2.7.0
+	github.com/gocolly/colly v1.2.0
 	github.com/gorilla/websocket v1.5.0
+	github.com/julienschmidt/httprouter v1.3.0
 	github.com/lib/pq v1.10.2
 	github.com/questdb/go-questdb-client v0.0.0-20220912094445-fa4d7bd7b59e
 	github.com/r3labs/sse/v2 v2.8.1
@@ -13,6 +16,7 @@ require (
 	github.com/samber/lo v1.33.0
 	github.com/sirupsen/logrus v1.9.0
 	gorm.io/driver/postgres v1.4.5
+	gorm.io/driver/sqlite v1.4.3
 	gorm.io/gorm v1.24.1-0.20221019064659-5dd2bb482755
 )
 
@@ -27,9 +31,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
-	github.com/go-resty/resty/v2 v2.7.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/gocolly/colly v1.2.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
@@ -46,7 +48,6 @@ require (
 	github.com/jackc/pgx/v4 v4.17.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/klauspost/compress v1.12.3 // indirect
 	github.com/mattn/go-sqlite3 v1.14.15 // indirect
@@ -62,5 +63,4 @@ require (
 	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
-	gorm.io/driver/sqlite v1.4.3 // indirect
 )

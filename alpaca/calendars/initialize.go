@@ -77,7 +77,7 @@ func Initialize() {
 		start := t.AddDate(-1, 0, 0).Format("2006-01-02")
 		end := t.AddDate(1, 0, 0).Format("2006-01-02")
 
-		rawCalendars, getDataErr := alpaca.GetData[[]RawCalendar]("/calendar", map[string]string{
+		rawCalendars, getDataErr := alpaca.GetTradeData[[]RawCalendar]("/calendar", map[string]string{
 			"start": start,
 			"end":   end,
 		})
