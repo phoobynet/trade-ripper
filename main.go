@@ -64,7 +64,6 @@ func main() {
 	postgres.Initialize(options)
 	assets.Initialize()
 	calendars.Initialize()
-	snapshots.CachePreviousClose()
 	server.InitSSE()
 
 	latestTradeRepository = tradeskv.NewLatestRepository(options)
@@ -75,14 +74,13 @@ func main() {
 
 	webServer = server.NewServer(options, dist, latestTradeRepository)
 
-	loggers.InitLogger(webServer)
-
 	logrus.Info("Starting up Trade Reader...")
 
 	// invoke when we have accumulated enough trades to write to the database
 	tradeWriter := writers.CreateTradeWriter(options)
 
 	tickers := options.ExtractTickers()
+	snapshots.CachePreviousClose(tickers)
 
 	tradeReader = alpaca.NewTradeReader(&alpaca.TradeReaderConfig{
 		Key:               os.Getenv("APCA_API_KEY_ID"),
@@ -186,5 +184,6 @@ func main() {
 		}
 	}()
 
+	loggers.InitLogger(webServer)
 	webServer.Listen()
 }

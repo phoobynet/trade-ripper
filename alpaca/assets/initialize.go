@@ -19,7 +19,8 @@ func Initialize() {
 	if count() == 0 {
 		logrus.Infoln("Fetching assets...")
 		rawAssets, getDataErr := alpaca.GetTradeData[[]RawAsset]("/assets", map[string]string{
-			"status": "active",
+			"status":      "active",
+			"asset_class": "us_equity",
 		})
 
 		if getDataErr != nil {

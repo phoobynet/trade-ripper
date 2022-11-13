@@ -3,8 +3,8 @@ package snapshots
 type SnapshotTrade struct {
 	Timestamp  string   `json:"t"`
 	Exchange   string   `json:"x"`
-	Price      string   `json:"p"`
-	Size       string   `json:"s"`
+	Price      float64  `json:"p"`
+	Size       float64  `json:"s"`
 	Conditions []string `json:"c"`
 	Index      float64  `json:"i"`
 	Tape       string   `json:"z"`
