@@ -18,6 +18,7 @@ import (
 	"github.com/phoobynet/trade-ripper/tradesdb/queries"
 	"github.com/phoobynet/trade-ripper/tradesdb/writers"
 	"github.com/sirupsen/logrus"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"sync"
@@ -30,7 +31,7 @@ var (
 	quitChannel       = make(chan os.Signal, 1)
 	options           configuration.Options
 	tradeReader       *alpaca.TradeReader
-	rawMessageChannel = make(chan []byte, 1_000_000)
+	rawMessageChannel = make(chan []byte, 100_000)
 	errorsChannel     = make(chan error, 1)
 	errorsReceived    = 0
 	tradesChannel     = make(chan []tradesdb.Trade, 10_000)
@@ -75,9 +76,8 @@ func main() {
 	tradeWriter := writers.CreateTradeWriter(options)
 
 	snapshots.CachePreviousClose(tickers)
-	previousClosingPrices, _ := snapshots.GetPreviousClosingPrices()
 
-	for ticker, price := range previousClosingPrices {
+	for ticker, price := range analysis.GetLatestPrices(time.Now()) {
 		latestPrices[ticker] = price
 	}
 
@@ -96,12 +96,12 @@ func main() {
 		for range gappersTicker.C {
 			tradesWriterLock.RLock()
 			gappers := analysis.GetGappers(latestPrices)
+			tradesWriterLock.RUnlock()
 			server.PublishEvent(map[string]any{
 				"type":    "gappers",
 				"message": "update",
 				"data":    gappers,
 			})
-			tradesWriterLock.RUnlock()
 		}
 	}()
 
@@ -149,11 +149,6 @@ func main() {
 						"data": map[string]any{
 							"n": count,
 						},
-					})
-				} else {
-					server.PublishEvent(map[string]any{
-						"type":    "ping",
-						"message": "hello",
 					})
 				}
 			}()

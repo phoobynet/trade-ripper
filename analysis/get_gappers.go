@@ -37,10 +37,6 @@ func GetGappers(latestPrices map[string]float64) []Gapper {
 
 	var results []Gapper
 
-	if latestPrices == nil || len(latestPrices) == 0 {
-		panic("latestPrices is nil or empty")
-	}
-
 	for ticker, price := range latestPrices {
 		previousClosingPrice := previousClosingPrices[ticker]
 

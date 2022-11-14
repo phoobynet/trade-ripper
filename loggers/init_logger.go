@@ -51,8 +51,6 @@ func InitLogger(webServer *server.Server) {
 			logrus.ErrorLevel,
 		},
 	})
-
-	logrus.AddHook(NewMessageStreamHook(webServer))
 }
 
 func Close() {
