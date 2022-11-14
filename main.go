@@ -7,6 +7,7 @@ import (
 	"github.com/phoobynet/trade-ripper/alpaca/assets"
 	"github.com/phoobynet/trade-ripper/alpaca/calendars"
 	"github.com/phoobynet/trade-ripper/alpaca/snapshots"
+	"github.com/phoobynet/trade-ripper/analysis"
 	"github.com/phoobynet/trade-ripper/configuration"
 	"github.com/phoobynet/trade-ripper/loggers"
 	"github.com/phoobynet/trade-ripper/market"
@@ -16,7 +17,6 @@ import (
 	"github.com/phoobynet/trade-ripper/tradesdb/postgres"
 	"github.com/phoobynet/trade-ripper/tradesdb/queries"
 	"github.com/phoobynet/trade-ripper/tradesdb/writers"
-	"github.com/phoobynet/trade-ripper/tradeskv"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
@@ -26,18 +26,18 @@ import (
 
 var (
 	//go:embed dist
-	dist                  embed.FS
-	quitChannel           = make(chan os.Signal, 1)
-	options               configuration.Options
-	tradeReader           *alpaca.TradeReader
-	rawMessageChannel     = make(chan []byte, 1_000_000)
-	errorsChannel         = make(chan error, 1)
-	errorsReceived        = 0
-	tradesChannel         = make(chan []tradesdb.Trade, 10_000)
-	tradesBuffer          = make([]tradesdb.Trade, 0)
-	tradesWriterLock      = sync.Mutex{}
-	latestTradeRepository *tradeskv.LatestTradeRepository
-	webServer             *server.Server
+	dist              embed.FS
+	quitChannel       = make(chan os.Signal, 1)
+	options           configuration.Options
+	tradeReader       *alpaca.TradeReader
+	rawMessageChannel = make(chan []byte, 1_000_000)
+	errorsChannel     = make(chan error, 1)
+	errorsReceived    = 0
+	tradesChannel     = make(chan []tradesdb.Trade, 10_000)
+	tradesBuffer      = make([]tradesdb.Trade, 0)
+	tradesWriterLock  = sync.RWMutex{}
+	webServer         *server.Server
+	latestPrices      = make(map[string]float64)
 )
 
 func main() {
@@ -66,21 +66,20 @@ func main() {
 	calendars.Initialize()
 	server.InitSSE()
 
-	latestTradeRepository = tradeskv.NewLatestRepository(options)
-
-	defer func(repository *tradeskv.LatestTradeRepository) {
-		repository.Close()
-	}(latestTradeRepository)
-
-	webServer = server.NewServer(options, dist, latestTradeRepository)
+	tickers := options.ExtractTickers()
+	webServer = server.NewServer(options, dist)
 
 	logrus.Info("Starting up Trade Reader...")
 
 	// invoke when we have accumulated enough trades to write to the database
 	tradeWriter := writers.CreateTradeWriter(options)
 
-	tickers := options.ExtractTickers()
 	snapshots.CachePreviousClose(tickers)
+	previousClosingPrices, _ := snapshots.GetPreviousClosingPrices()
+
+	for ticker, price := range previousClosingPrices {
+		latestPrices[ticker] = price
+	}
 
 	tradeReader = alpaca.NewTradeReader(&alpaca.TradeReaderConfig{
 		Key:               os.Getenv("APCA_API_KEY_ID"),
@@ -90,6 +89,21 @@ func main() {
 		ErrorsChannel:     errorsChannel,
 		Options:           options,
 	})
+
+	go func() {
+		gappersTicker := time.NewTicker(1 * time.Second)
+
+		for range gappersTicker.C {
+			tradesWriterLock.RLock()
+			gappers := analysis.GetGappers(latestPrices)
+			server.PublishEvent(map[string]any{
+				"type":    "gappers",
+				"message": "update",
+				"data":    gappers,
+			})
+			tradesWriterLock.RUnlock()
+		}
+	}()
 
 	go func() {
 		marketStatusTicker := time.NewTicker(1 * time.Second)
@@ -172,9 +186,8 @@ func main() {
 			case tradeMessages := <-tradesChannel:
 				tradesWriterLock.Lock()
 				tradesBuffer = append(tradesBuffer, tradeMessages...)
-				latestTradeUpdateErr := latestTradeRepository.Update(tradeMessages)
-				if latestTradeUpdateErr != nil {
-					logrus.Error(latestTradeUpdateErr)
+				for _, trade := range tradeMessages {
+					latestPrices[trade["S"].(string)] = trade["p"].(float64)
 				}
 				tradesWriterLock.Unlock()
 			case err := <-errorsChannel:

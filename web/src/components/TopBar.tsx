@@ -29,7 +29,19 @@ export default function TopBar() {
   }, [marketStatus])
   return (
     <div className={'flex h-10 items-center justify-between px-2'}>
-      <div className={'font-bold uppercase tracking-widest text-slate-200'}>
+      <div
+        className={
+          'font-bold uppercase tracking-widest text-slate-200 md:hidden'
+        }
+      >
+        TR
+      </div>
+
+      <div
+        className={
+          'hidden font-bold uppercase tracking-widest text-slate-200 md:block'
+        }
+      >
         trade ripper
       </div>
       <div className={'flex space-x-2'}>

@@ -4,22 +4,19 @@ import (
 	"embed"
 	"github.com/julienschmidt/httprouter"
 	"github.com/phoobynet/trade-ripper/configuration"
-	"github.com/phoobynet/trade-ripper/tradeskv"
 	"github.com/rs/cors"
 	"io/fs"
 	"net/http"
 )
 
 type Server struct {
-	options               configuration.Options
-	latestTradeRepository *tradeskv.LatestTradeRepository
-	mux                   *http.ServeMux
+	options configuration.Options
+	mux     *http.ServeMux
 }
 
-func NewServer(options configuration.Options, dist embed.FS, latestTradeRepository *tradeskv.LatestTradeRepository) *Server {
+func NewServer(options configuration.Options, dist embed.FS) *Server {
 	webServer := &Server{
 		options,
-		latestTradeRepository,
 		http.NewServeMux(),
 	}
 

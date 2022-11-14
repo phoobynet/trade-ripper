@@ -6,8 +6,13 @@ import numeral from 'numeral'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AiFillAlert, AiOutlineStock } from 'react-icons/ai'
 import { BsCurrencyBitcoin } from 'react-icons/bs'
+import Gappers from '../components/Gappers'
+import { reverse, take, takeRight } from 'lodash'
+import { Gapper } from '../types/Gapper'
 
 export default function Dashboard() {
+  const marketStatus = useAppStore((state) => state.marketStatus)
+  const gappers = useAppStore((state) => state.gappers)
   const count = useAppStore((state) => state.count)
   const fetchClass = useAppStore((state) => state.fetchClass)
   const instrumentClass = useAppStore((state) => state.instrumentClass)
@@ -15,6 +20,41 @@ export default function Dashboard() {
   const [secondsSinceLastCheckIn, setSecondsSinceLastCheckIn] =
     useState<number>(0)
   const lastMessageCheckInterval = useRef<ReturnType<typeof setInterval>>()
+  const [gainers, setGainers] = useState<Gapper[]>([])
+  const [losers, setLosers] = useState<Gapper[]>([])
+
+  useEffect(() => {
+    setGainers(take(gappers, 30))
+    setLosers(reverse(takeRight(gappers, 30)))
+  }, [gappers])
+
+  const formattedCount = useMemo(() => {
+    if (!marketStatus?.status || marketStatus?.status === 'opening_later') {
+      return 'Waiting for open|...'
+    }
+
+    if (marketStatus?.status === 'closedToday') {
+      return 'Closed Today'
+    }
+
+    if (count === 0) {
+      return 'No Trades Yet'
+    }
+
+    return numeral(count).format('0,0')
+  }, [count, marketStatus])
+
+  const formattedTradesPerSecond = useMemo(() => {
+    if (
+      marketStatus?.status === 'open' ||
+      marketStatus?.status === 'pre_market' ||
+      marketStatus?.status === 'post_market'
+    ) {
+      return `Trades per second: ${numeral(tradesPerSecond).format('0,0')}`
+    }
+
+    return ''
+  }, [tradesPerSecond, marketStatus])
 
   const displayInstrumentClass = useMemo(() => {
     if (instrumentClass === 'us_equity') {
@@ -92,12 +132,20 @@ export default function Dashboard() {
           ></Stat>
           <Stat
             title={'Trades today'}
-            value={numeral(count).format('0.000a')}
+            value={formattedCount}
             type={'info'}
-            comment={`Trades per second: ${numeral(tradesPerSecond).format(
-              '0,0',
-            )}`}
+            comment={formattedTradesPerSecond}
           ></Stat>
+        </section>
+        <section className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          <Gappers
+            gappers={gainers}
+            title="Gainers"
+          />
+          <Gappers
+            gappers={losers}
+            title="Losers"
+          />
         </section>
       </main>
     </div>

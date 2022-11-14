@@ -2,6 +2,7 @@ import { getClass } from '../api/getCount'
 import { InstrumentClass } from '../types/InstrumentClass'
 import { take } from 'lodash'
 import create from 'zustand'
+import { Gapper } from '../types/Gapper'
 
 const sourceUrl = import.meta.env.DEV
   ? `http://${location.hostname}:3000`
@@ -38,6 +39,7 @@ export interface AppStore {
   rateBuffer: number[]
   tradesPerSecond: number
   marketStatus?: MarketStatus
+  gappers?: Gapper[]
   instrumentClass?: InstrumentClass
   fetchClass: () => Promise<void>
 }
@@ -50,6 +52,7 @@ export const useAppStore = create<AppStore>((set) => ({
   tradesPerSecond: 0,
   instrumentClass: undefined,
   marketStatus: undefined,
+  gappers: undefined,
   fetchClass: async () => {
     getClass().then((c) => set({ instrumentClass: c }))
   },
@@ -90,6 +93,10 @@ eventSource.onmessage = (event) => {
   } else if (message.type === 'market_status') {
     useAppStore.setState(() => ({
       marketStatus: message.data as MarketStatus,
+    }))
+  } else if (message.type === 'gappers') {
+    useAppStore.setState(() => ({
+      gappers: message.data as Gapper[],
     }))
   }
 
