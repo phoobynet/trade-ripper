@@ -3,7 +3,7 @@ package queries
 import (
 	_ "embed"
 	"fmt"
-	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/internal/configuration"
 	"github.com/phoobynet/trade-ripper/tradesdb/postgres"
 )
 

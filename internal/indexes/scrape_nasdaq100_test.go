@@ -1,9 +1,9 @@
-package scrapers
+package indexes
 
 import "testing"
 
-func TestGetDJIA(t *testing.T) {
-	actual, err := GetDJIA()
+func TestGetNASDAQ100(t *testing.T) {
+	actual, err := ScrapeNASDAQ100()
 
 	if err != nil {
 		t.Fatal(err)

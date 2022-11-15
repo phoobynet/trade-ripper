@@ -2,7 +2,7 @@ package writers
 
 import (
 	"context"
-	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/internal/configuration"
 	"github.com/phoobynet/trade-ripper/tradesdb"
 	"github.com/phoobynet/trade-ripper/tradesdb/influx"
 	"github.com/phoobynet/trade-ripper/tradesdb/schema"

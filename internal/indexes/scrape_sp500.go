@@ -1,4 +1,4 @@
-package scrapers
+package indexes
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// GetSP500 scrapes the S&P 500 from https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
-func GetSP500() ([]IndexConstituent, error) {
+// ScrapeSP500 scrapes the S&P 500 from https://en.wikipedia.org/wiki/List_of_S%26P_500_companies
+func ScrapeSP500() ([]IndexConstituent, error) {
 	c := colly.NewCollector()
 
 	headerMap := make(map[string]int)

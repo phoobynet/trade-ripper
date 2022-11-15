@@ -1,9 +1,9 @@
-package scrapers
+package indexes
 
 import "testing"
 
 func TestGetSP500(t *testing.T) {
-	actual, err := GetSP500()
+	actual, err := ScrapeSP500()
 
 	if err != nil {
 		t.Fatal(err)

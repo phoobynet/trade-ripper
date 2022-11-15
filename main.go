@@ -2,14 +2,15 @@ package main
 
 import (
 	"embed"
-	"github.com/alexflint/go-arg"
 	"github.com/phoobynet/trade-ripper/alpaca"
 	"github.com/phoobynet/trade-ripper/alpaca/assets"
 	"github.com/phoobynet/trade-ripper/alpaca/calendars"
 	"github.com/phoobynet/trade-ripper/alpaca/snapshots"
 	"github.com/phoobynet/trade-ripper/analysis"
-	"github.com/phoobynet/trade-ripper/configuration"
-	"github.com/phoobynet/trade-ripper/loggers"
+	"github.com/phoobynet/trade-ripper/internal/configuration"
+	_ "github.com/phoobynet/trade-ripper/internal/configuration"
+	"github.com/phoobynet/trade-ripper/internal/loggers"
+	_ "github.com/phoobynet/trade-ripper/internal/loggers"
 	"github.com/phoobynet/trade-ripper/market"
 	"github.com/phoobynet/trade-ripper/server"
 	"github.com/phoobynet/trade-ripper/tradesdb"
@@ -21,6 +22,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"time"
 )
@@ -29,7 +31,6 @@ var (
 	//go:embed dist
 	dist              embed.FS
 	quitChannel       = make(chan os.Signal, 1)
-	options           configuration.Options
 	tradeReader       *alpaca.TradeReader
 	rawMessageChannel = make(chan []byte, 100_000)
 	errorsChannel     = make(chan error, 1)
@@ -46,34 +47,22 @@ func main() {
 		loggers.Close()
 	}()
 
-	arg.MustParse(&options)
-
-	if options.DBInfluxPort == 0 {
-		options.DBInfluxPort = 9009
-	}
-
-	if options.DBPostgresPort == 0 {
-		options.DBPostgresPort = 8812
-	}
-
-	if options.WebServerPort == 0 {
-		options.WebServerPort = 3000
-	}
-
 	signal.Notify(quitChannel, os.Interrupt)
 
-	postgres.Initialize(options)
+	tradeRipperOptions := configuration.GetTradeRipperOptions()
+	tickers := strings.Split(tradeRipperOptions.Tickers, ",")
+
+	postgres.Initialize(tradeRipperOptions)
 	assets.Initialize()
 	calendars.Initialize()
 	server.InitSSE()
 
-	tickers := options.ExtractTickers()
-	webServer = server.NewServer(options, dist)
+	webServer = server.NewServer(tradeRipperOptions, dist)
 
 	logrus.Info("Starting up Trade Reader...")
 
 	// invoke when we have accumulated enough trades to write to the database
-	tradeWriter := writers.CreateTradeWriter(options)
+	tradeWriter := writers.CreateTradeWriter(tradeRipperOptions)
 
 	snapshots.CachePreviousClose(tickers)
 
@@ -87,7 +76,7 @@ func main() {
 		Symbols:           tickers,
 		RawMessageChannel: rawMessageChannel,
 		ErrorsChannel:     errorsChannel,
-		Options:           options,
+		Options:           tradeRipperOptions,
 	})
 
 	go func() {
@@ -119,7 +108,7 @@ func main() {
 	}()
 
 	go func() {
-		count, countErr := queries.Count(options)
+		count, countErr := queries.Count(tradeRipperOptions)
 
 		if countErr != nil {
 			logrus.Panicf("Error counting trades: %s", countErr)
@@ -192,6 +181,5 @@ func main() {
 		}
 	}()
 
-	loggers.InitLogger(webServer)
 	webServer.Listen()
 }

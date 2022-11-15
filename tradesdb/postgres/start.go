@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"fmt"
-	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/internal/configuration"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

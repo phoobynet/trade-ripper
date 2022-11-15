@@ -1,6 +1,8 @@
 package writers
 
-import "github.com/phoobynet/trade-ripper/configuration"
+import (
+	"github.com/phoobynet/trade-ripper/internal/configuration"
+)
 
 func CreateTradeWriter(options configuration.Options) TradeWriter {
 	var tradeWriter TradeWriter

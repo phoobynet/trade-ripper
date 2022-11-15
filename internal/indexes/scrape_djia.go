@@ -1,4 +1,4 @@
-package scrapers
+package indexes
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// GetDJIA scrapes the DJIA from https://en.wikipedia.org/wiki/Dow_Jones_Industrial_Average (probably not the best source)
-func GetDJIA() ([]IndexConstituent, error) {
+// ScrapeDJIA scrapes the DJIA from https://en.wikipedia.org/wiki/Dow_Jones_Industrial_Average (probably not the best source)
+func ScrapeDJIA() ([]IndexConstituent, error) {
 	c := colly.NewCollector()
 
 	headerMap := make(map[string]int)

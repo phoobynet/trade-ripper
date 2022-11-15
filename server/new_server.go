@@ -3,7 +3,7 @@ package server
 import (
 	"embed"
 	"github.com/julienschmidt/httprouter"
-	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/internal/configuration"
 	"github.com/rs/cors"
 	"io/fs"
 	"net/http"

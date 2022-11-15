@@ -2,7 +2,6 @@ package loggers
 
 import (
 	"fmt"
-	"github.com/phoobynet/trade-ripper/server"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/writer"
 	"io"
@@ -15,7 +14,7 @@ var (
 	logFile      *os.File
 )
 
-func InitLogger(webServer *server.Server) {
+func init() {
 	now := time.Now().Format("20060102_150405")
 
 	lf, logFileErr := os.Create(fmt.Sprintf("trade_ripper_%s.log", now))

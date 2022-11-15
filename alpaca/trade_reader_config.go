@@ -1,7 +1,7 @@
 package alpaca
 
 import (
-	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/internal/configuration"
 )
 
 type TradeReaderConfig struct {

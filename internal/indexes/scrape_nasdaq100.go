@@ -1,4 +1,4 @@
-package scrapers
+package indexes
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// GetNASDAQ100 scrapes the NASDAQ 100 from https://en.wikipedia.org/wiki/Nasdaq-100 (probably not the best source)
-func GetNASDAQ100() ([]IndexConstituent, error) {
+// ScrapeNASDAQ100 scrapes the NASDAQ 100 from https://en.wikipedia.org/wiki/Nasdaq-100 (probably not the best source)
+func ScrapeNASDAQ100() ([]IndexConstituent, error) {
 	c := colly.NewCollector()
 
 	headerMap := make(map[string]int)

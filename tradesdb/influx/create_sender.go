@@ -3,7 +3,7 @@ package influx
 import (
 	"context"
 	"fmt"
-	"github.com/phoobynet/trade-ripper/configuration"
+	"github.com/phoobynet/trade-ripper/internal/configuration"
 	qdb "github.com/questdb/go-questdb-client"
 	"github.com/sirupsen/logrus"
 )
