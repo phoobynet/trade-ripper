@@ -1,8 +1,9 @@
-package alpaca
+package realtime
 
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/phoobynet/trade-ripper/internal/configuration"
 	"github.com/sirupsen/logrus"
 	"net/url"
 	"time"
@@ -22,9 +23,9 @@ func NewTradeReader(config *TradeReaderConfig) *TradeReader {
 	var socketURL url.URL
 
 	if config.Options.Class == "crypto" {
-		socketURL = cryptoURL
+		socketURL = url.URL{Scheme: "wss", Host: "stream.data.alpaca.markets", Path: "/v1beta2/crypto"}
 	} else if config.Options.Class == "us_equity" {
-		socketURL = usEquitiesURL
+		socketURL = url.URL{Scheme: "wss", Host: "stream.data.alpaca.markets", Path: "/v2/sip"}
 	}
 
 	return &TradeReader{
@@ -120,4 +121,24 @@ func (r *TradeReader) subscribe() error {
 		Action: "subscribe",
 		Trades: r.config.Symbols,
 	})
+}
+
+type authMessage struct {
+	Action string `json:"action"`
+	Key    string `json:"key"`
+	Secret string `json:"secret"`
+}
+
+type subscribeMessage struct {
+	Action string   `json:"action"`
+	Trades []string `json:"trades,omitempty"`
+}
+
+type TradeReaderConfig struct {
+	Key               string
+	Secret            string
+	Symbols           []string
+	ErrorsChannel     chan error
+	RawMessageChannel chan []byte
+	Options           configuration.Options
 }

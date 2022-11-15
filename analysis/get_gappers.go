@@ -1,8 +1,8 @@
 package analysis
 
 import (
-	"github.com/phoobynet/trade-ripper/alpaca/calendars"
-	"github.com/phoobynet/trade-ripper/alpaca/snapshots"
+	"github.com/phoobynet/trade-ripper/internal/market/calendars"
+	"github.com/phoobynet/trade-ripper/internal/market/prices"
 	"github.com/phoobynet/trade-ripper/utils"
 	"sort"
 	"time"
@@ -22,7 +22,7 @@ var previousCalendar *calendars.Calendar
 
 func GetGappers(latestPrices map[string]float64) []Gapper {
 	if previousCalendar == nil {
-		c, p := snapshots.GetPreviousClosingPrices()
+		c, p := prices.GetPreviousClosingPrices()
 		previousCalendar = &p
 		previousClosingPrices = c
 	}
@@ -30,7 +30,7 @@ func GetGappers(latestPrices map[string]float64) []Gapper {
 	now := time.Now().Format("2006-01-02")
 
 	if now != previousCalendar.Date {
-		c, p := snapshots.GetPreviousClosingPrices()
+		c, p := prices.GetPreviousClosingPrices()
 		previousCalendar = &p
 		previousClosingPrices = c
 	}

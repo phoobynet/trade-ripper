@@ -2,7 +2,7 @@ package calendars
 
 import (
 	"fmt"
-	"github.com/phoobynet/trade-ripper/alpaca"
+	"github.com/phoobynet/trade-ripper/internal/market"
 	"github.com/phoobynet/trade-ripper/localdb"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
@@ -77,7 +77,7 @@ func Initialize() {
 		start := t.AddDate(-1, 0, 0).Format("2006-01-02")
 		end := t.AddDate(1, 0, 0).Format("2006-01-02")
 
-		rawCalendars, getDataErr := alpaca.GetTradeData[[]RawCalendar]("/calendar", map[string]string{
+		rawCalendars, getDataErr := market.GetTradeData[[]RawCalendar]("/calendar", map[string]string{
 			"start": start,
 			"end":   end,
 		})

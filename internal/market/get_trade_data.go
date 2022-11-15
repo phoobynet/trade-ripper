@@ -1,4 +1,4 @@
-package alpaca
+package market
 
 import (
 	"github.com/go-resty/resty/v2"

@@ -2,7 +2,7 @@ package server
 
 import (
 	"github.com/julienschmidt/httprouter"
-	"github.com/phoobynet/trade-ripper/alpaca/calendars"
+	"github.com/phoobynet/trade-ripper/internal/market/calendars"
 	"net/http"
 )
 

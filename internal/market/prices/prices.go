@@ -1,7 +1,8 @@
-package snapshots
+package prices
 
 import (
-	"github.com/phoobynet/trade-ripper/alpaca/calendars"
+	calendars2 "github.com/phoobynet/trade-ripper/internal/market/calendars"
+	"github.com/phoobynet/trade-ripper/internal/market/snapshots"
 	"github.com/phoobynet/trade-ripper/localdb"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
@@ -18,7 +19,7 @@ func CachePreviousClose(tickers []string) {
 		logrus.Fatal(autoMigrateErr)
 	}
 
-	previousCalendar := calendars.Previous()
+	previousCalendar := calendars2.Previous()
 
 	var count int64
 
@@ -30,7 +31,7 @@ func CachePreviousClose(tickers []string) {
 
 	if count == 0 {
 		logrus.Info("Caching previous close...")
-		snapshots := Get(tickers)
+		snapshots := snapshots.GetSnapshots(tickers)
 
 		previousCloses := make([]PreviousClose, 0)
 
@@ -71,6 +72,28 @@ func CachePreviousClose(tickers []string) {
 
 		logrus.Info("Cached previous close...DONE")
 	}
+}
+
+func GetPreviousClosingPrices() (map[string]float64, calendars2.Calendar) {
+	db := localdb.Get()
+
+	previousCalendar := calendars2.Previous()
+
+	var previousCloses []PreviousClose
+
+	err := db.Raw("select ticker, price, date from previous_close where date = ?", previousCalendar.Date).Scan(&previousCloses).Error
+
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	previousClosingPrices := make(map[string]float64, 0)
+
+	for _, previousClose := range previousCloses {
+		previousClosingPrices[previousClose.Ticker] = previousClose.Price
+	}
+
+	return previousClosingPrices, *previousCalendar
 }
 
 type PreviousClose struct {

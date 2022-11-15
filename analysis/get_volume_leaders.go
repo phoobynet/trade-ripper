@@ -1,7 +1,7 @@
 package analysis
 
 import (
-	"github.com/phoobynet/trade-ripper/alpaca/assets"
+	"github.com/phoobynet/trade-ripper/internal/market/asset"
 	"github.com/phoobynet/trade-ripper/tradesdb/postgres"
 	"github.com/samber/lo"
 	"strconv"
@@ -51,16 +51,16 @@ func GetVolumeLeaders(date string, limit int) ([]VolumeLeader, error) {
 		return volumeLeader.Ticker
 	})
 
-	tickerAssets := assets.ManySimplified(tickers)
+	tickerAssets := asset.GetRepositoryInstance().ManySimplified(tickers)
 
 	volumeLeaders = lo.Map[VolumeLeader, VolumeLeader](volumeLeaders, func(volumeLeader VolumeLeader, _ int) VolumeLeader {
-		if asset, ok := tickerAssets[volumeLeader.Ticker]; ok {
+		if a, ok := tickerAssets[volumeLeader.Ticker]; ok {
 			return VolumeLeader{
 				Ticker:   volumeLeader.Ticker,
 				Volume:   volumeLeader.Volume,
 				Price:    volumeLeader.Price,
-				Name:     asset.Name,
-				Exchange: asset.Exchange,
+				Name:     a.Name,
+				Exchange: a.Exchange,
 			}
 		} else {
 			return volumeLeader

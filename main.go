@@ -2,16 +2,15 @@ package main
 
 import (
 	"embed"
-	"github.com/phoobynet/trade-ripper/alpaca"
-	"github.com/phoobynet/trade-ripper/alpaca/assets"
-	"github.com/phoobynet/trade-ripper/alpaca/calendars"
-	"github.com/phoobynet/trade-ripper/alpaca/snapshots"
 	"github.com/phoobynet/trade-ripper/analysis"
 	"github.com/phoobynet/trade-ripper/internal/configuration"
 	_ "github.com/phoobynet/trade-ripper/internal/configuration"
 	"github.com/phoobynet/trade-ripper/internal/loggers"
 	_ "github.com/phoobynet/trade-ripper/internal/loggers"
-	"github.com/phoobynet/trade-ripper/market"
+	"github.com/phoobynet/trade-ripper/internal/market/calendars"
+	"github.com/phoobynet/trade-ripper/internal/market/prices"
+	"github.com/phoobynet/trade-ripper/internal/market/realtime"
+	"github.com/phoobynet/trade-ripper/internal/market/status"
 	"github.com/phoobynet/trade-ripper/server"
 	"github.com/phoobynet/trade-ripper/tradesdb"
 	"github.com/phoobynet/trade-ripper/tradesdb/adapters"
@@ -31,7 +30,7 @@ var (
 	//go:embed dist
 	dist              embed.FS
 	quitChannel       = make(chan os.Signal, 1)
-	tradeReader       *alpaca.TradeReader
+	tradeReader       *realtime.TradeReader
 	rawMessageChannel = make(chan []byte, 100_000)
 	errorsChannel     = make(chan error, 1)
 	errorsReceived    = 0
@@ -53,7 +52,6 @@ func main() {
 	tickers := strings.Split(tradeRipperOptions.Tickers, ",")
 
 	postgres.Initialize(tradeRipperOptions)
-	assets.Initialize()
 	calendars.Initialize()
 	server.InitSSE()
 
@@ -64,13 +62,13 @@ func main() {
 	// invoke when we have accumulated enough trades to write to the database
 	tradeWriter := writers.CreateTradeWriter(tradeRipperOptions)
 
-	snapshots.CachePreviousClose(tickers)
+	prices.CachePreviousClose(tickers)
 
 	for ticker, price := range analysis.GetLatestPrices(time.Now()) {
 		latestPrices[ticker] = price
 	}
 
-	tradeReader = alpaca.NewTradeReader(&alpaca.TradeReaderConfig{
+	tradeReader = realtime.NewTradeReader(&realtime.TradeReaderConfig{
 		Key:               os.Getenv("APCA_API_KEY_ID"),
 		Secret:            os.Getenv("APCA_API_SECRET_KEY"),
 		Symbols:           tickers,
@@ -98,7 +96,7 @@ func main() {
 		marketStatusTicker := time.NewTicker(1 * time.Second)
 
 		for range marketStatusTicker.C {
-			status := market.GetStatus()
+			status := status.GetMarketStatus()
 			server.PublishEvent(map[string]any{
 				"message": "update",
 				"type":    "market_status",

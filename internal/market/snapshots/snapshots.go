@@ -1,5 +1,36 @@
 package snapshots
 
+import (
+	"github.com/phoobynet/trade-ripper/internal/market"
+	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
+	"strings"
+)
+
+func GetSnapshots(tickers []string) map[string]Snapshot {
+	chunks := lo.Chunk[string](tickers, 500)
+
+	snapshots := make(map[string]Snapshot, 0)
+
+	for _, chunk := range chunks {
+		symbols := strings.Join(chunk, ",")
+		logrus.Infof("Fetching snapshots chunk for %s", symbols)
+		response, err := market.GetMarketData[map[string]Snapshot]("/stocks/snapshots", map[string]string{
+			"symbols": symbols,
+		})
+
+		if err != nil {
+			panic(err)
+		}
+
+		for ticker, snapshot := range response {
+			snapshots[ticker] = snapshot
+		}
+	}
+
+	return snapshots
+}
+
 type SnapshotTrade struct {
 	Timestamp  string   `json:"t"`
 	Exchange   string   `json:"x"`
