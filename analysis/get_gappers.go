@@ -1,9 +1,10 @@
 package analysis
 
 import (
+	number_diff "github.com/phoobynet/number-diff"
 	"github.com/phoobynet/trade-ripper/internal/market/calendars"
 	"github.com/phoobynet/trade-ripper/internal/market/prices"
-	"github.com/phoobynet/trade-ripper/utils"
+	"log"
 	"sort"
 	"time"
 )
@@ -40,15 +41,19 @@ func GetGappers(latestPrices map[string]float64) []Gapper {
 	for ticker, price := range latestPrices {
 		previousClosingPrice := previousClosingPrices[ticker]
 
-		change := utils.NumberDiff(previousClosingPrice, price)
+		change, err := number_diff.DiffWithLocale(previousClosingPrice, price, "USD")
+
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		results = append(results, Gapper{
 			Ticker:        ticker,
 			PreviousClose: previousClosingPrice,
 			PrevDate:      previousCalendar.Date,
 			Price:         price,
-			Change:        change.CashDifference,
-			Percent:       change.PercentDifference,
+			Change:        change.Diff,
+			Percent:       change.PctDiff,
 		})
 	}
 

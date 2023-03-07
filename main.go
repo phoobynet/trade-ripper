@@ -96,11 +96,11 @@ func main() {
 		marketStatusTicker := time.NewTicker(1 * time.Second)
 
 		for range marketStatusTicker.C {
-			status := status.GetMarketStatus()
+			marketStatus := status.GetMarketStatus()
 			server.PublishEvent(map[string]any{
 				"message": "update",
 				"type":    "market_status",
-				"data":    status,
+				"data":    marketStatus,
 			})
 		}
 	}()

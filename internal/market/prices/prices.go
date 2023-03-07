@@ -31,14 +31,14 @@ func CachePreviousClose(tickers []string) {
 
 	if count == 0 {
 		logrus.Info("Caching previous close...")
-		snapshots := snapshots.GetSnapshots(tickers)
+		tickersSnapshots := snapshots.GetSnapshots(tickers)
 
 		previousCloses := make([]PreviousClose, 0)
 
 		today := time.Now().Format("2006-01-02")
 
 		var price float64
-		for ticker, s := range snapshots {
+		for ticker, s := range tickersSnapshots {
 			if reflect.ValueOf(s).IsZero() || reflect.ValueOf(s.DailyBar).IsZero() || reflect.ValueOf(s.PrevDailyBar).IsZero() {
 				continue
 			}

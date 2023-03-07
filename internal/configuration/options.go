@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/alexflint/go-arg"
+	djia "github.com/phoobynet/djia-constituent-scraper"
 	scrapers2 "github.com/phoobynet/trade-ripper/internal/indexes"
 	"github.com/phoobynet/trade-ripper/utils"
 	"github.com/samber/lo"
@@ -69,11 +70,16 @@ func (o *Options) extractTickers() {
 
 				indexConstituents = append(indexConstituents, nasdaq100...)
 			} else if index == "djia" {
-				djia, djiaErr := scrapers2.ScrapeDJIA()
+				djiaConstituents, djiaErr := djia.ScrapeDJIA()
 				if djiaErr != nil {
 					logrus.Fatalln(djiaErr)
 				}
-				indexConstituents = append(indexConstituents, djia...)
+				for _, djiaConstituent := range djiaConstituents {
+					indexConstituents = append(indexConstituents, scrapers2.IndexConstituent{
+						Ticker:  djiaConstituent.Ticker,
+						Company: djiaConstituent.Company,
+					})
+				}
 			}
 		}
 
